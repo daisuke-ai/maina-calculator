@@ -232,12 +232,14 @@ export function ResultsTable({ offers, propertyAddress = 'Property Address', ask
 
               {/* Editable: Offer Price */}
               <tr className="border-b border-border bg-accent/5 border-l-4 border-l-accent">
-                <td className="py-3 px-4 font-semibold text-foreground sticky left-0 bg-accent/5 border-r border-border flex items-center gap-2">
-                  <span>Offer Price</span>
-                  <span className="text-xs text-white font-normal">(Editable)</span>
+                <td className="py-3 px-4 font-semibold text-foreground sticky left-0 bg-accent/5 border-r border-border">
+                  <div className="flex items-center gap-2">
+                    <span>Offer Price</span>
+                    <span className="text-xs text-white font-normal whitespace-nowrap">(Editable)</span>
+                  </div>
                 </td>
                 {editableOffers.map((offer, idx) => (
-                  <td key={offer.offer_type} className="py-3 px-4 text-center border-l border-border">
+                  <td key={offer.offer_type} className="py-3 px-4 border-l border-border">
                     {editingRow === 'offer_price' && editingColumn === idx ? (
                       <div className="flex items-center justify-center gap-2">
                         <input
@@ -248,22 +250,23 @@ export function ResultsTable({ offers, propertyAddress = 'Property Address', ask
                             if (e.key === 'Enter') handleEditSave()
                             if (e.key === 'Escape') handleEditCancel()
                           }}
-                          className="w-24 px-2 py-1 text-sm border-2 border-accent rounded bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                          className="w-28 px-2 py-1.5 text-sm border-2 border-accent rounded bg-background text-foreground text-center focus:outline-none focus:ring-2 focus:ring-accent"
                           autoFocus
                         />
-                        <button onClick={handleEditSave} className="p-1 text-accent rounded">
+                        <button onClick={handleEditSave} className="p-1.5 text-accent rounded hover:bg-accent/10 transition-colors">
                           <Check className="w-4 h-4" />
                         </button>
-                        <button onClick={handleEditCancel} className="p-1 text-muted-foreground rounded">
+                        <button onClick={handleEditCancel} className="p-1.5 text-muted-foreground rounded hover:bg-muted transition-colors">
                           <X className="w-4 h-4" />
                         </button>
                       </div>
                     ) : (
-                      <div className="flex items-center justify-center gap-2">
+                      <div className="flex items-center justify-center gap-1.5 min-h-[32px]">
                         <span className="font-bold text-foreground">{formatCurrency(offer.final_offer_price)}</span>
                         <button
                           onClick={() => handleEditStart('offer_price', idx, offer.final_offer_price)}
-                          className="p-1 text-accent rounded"
+                          className="p-1 text-accent rounded hover:bg-accent/10 transition-colors flex-shrink-0"
+                          title="Edit offer price"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
@@ -310,12 +313,14 @@ export function ResultsTable({ offers, propertyAddress = 'Property Address', ask
 
               {/* Editable: Down Payment */}
               <tr className="border-b border-border bg-accent/5 border-l-4 border-l-accent">
-                <td className="py-3 px-4 font-semibold text-foreground sticky left-0 bg-accent/5 border-r border-border flex items-center gap-2">
-                  <span>Down Payment</span>
-                  <span className="text-xs text-white font-normal">(Editable)</span>
+                <td className="py-3 px-4 font-semibold text-foreground sticky left-0 bg-accent/5 border-r border-border">
+                  <div className="flex items-center gap-2">
+                    <span>Down Payment</span>
+                    <span className="text-xs text-white font-normal whitespace-nowrap">(Editable)</span>
+                  </div>
                 </td>
                 {editableOffers.map((offer, idx) => (
-                  <td key={offer.offer_type} className="py-3 px-4 text-center border-l border-border">
+                  <td key={offer.offer_type} className="py-3 px-4 border-l border-border">
                     {editingRow === 'down_payment' && editingColumn === idx ? (
                       <div className="flex items-center justify-center gap-2">
                         <input
@@ -326,23 +331,24 @@ export function ResultsTable({ offers, propertyAddress = 'Property Address', ask
                             if (e.key === 'Enter') handleEditSave()
                             if (e.key === 'Escape') handleEditCancel()
                           }}
-                          className="w-24 px-2 py-1 text-sm border-2 border-accent rounded bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                          className="w-28 px-2 py-1.5 text-sm border-2 border-accent rounded bg-background text-foreground text-center focus:outline-none focus:ring-2 focus:ring-accent"
                           autoFocus
                         />
-                        <button onClick={handleEditSave} className="p-1 text-accent rounded">
+                        <button onClick={handleEditSave} className="p-1.5 text-accent rounded hover:bg-accent/10 transition-colors">
                           <Check className="w-4 h-4" />
                         </button>
-                        <button onClick={handleEditCancel} className="p-1 text-muted-foreground rounded">
+                        <button onClick={handleEditCancel} className="p-1.5 text-muted-foreground rounded hover:bg-muted transition-colors">
                           <X className="w-4 h-4" />
                         </button>
                       </div>
                     ) : (
                       <div className="flex flex-col items-center">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center justify-center gap-1.5 min-h-[32px]">
                           <span className="font-bold text-foreground">{formatCurrency(offer.down_payment)}</span>
                           <button
                             onClick={() => handleEditStart('down_payment', idx, offer.down_payment)}
-                            className="p-1 text-accent rounded"
+                            className="p-1 text-accent rounded hover:bg-accent/10 transition-colors flex-shrink-0"
+                            title="Edit down payment"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
@@ -365,12 +371,14 @@ export function ResultsTable({ offers, propertyAddress = 'Property Address', ask
 
               {/* Editable: Monthly Payment */}
               <tr className="border-b-2 border-border bg-accent/5 border-l-4 border-l-accent">
-                <td className="py-3 px-4 font-semibold text-foreground sticky left-0 bg-accent/5 border-r border-border flex items-center gap-2">
-                  <span>Monthly Payment</span>
-                  <span className="text-xs text-white font-normal">(Editable)</span>
+                <td className="py-3 px-4 font-semibold text-foreground sticky left-0 bg-accent/5 border-r border-border">
+                  <div className="flex items-center gap-2">
+                    <span>Monthly Payment</span>
+                    <span className="text-xs text-white font-normal whitespace-nowrap">(Editable)</span>
+                  </div>
                 </td>
                 {editableOffers.map((offer, idx) => (
-                  <td key={offer.offer_type} className="py-3 px-4 text-center border-l border-border">
+                  <td key={offer.offer_type} className="py-3 px-4 border-l border-border">
                     {editingRow === 'monthly_payment' && editingColumn === idx ? (
                       <div className="flex items-center justify-center gap-2">
                         <input
@@ -381,22 +389,23 @@ export function ResultsTable({ offers, propertyAddress = 'Property Address', ask
                             if (e.key === 'Enter') handleEditSave()
                             if (e.key === 'Escape') handleEditCancel()
                           }}
-                          className="w-24 px-2 py-1 text-sm border-2 border-accent rounded bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                          className="w-28 px-2 py-1.5 text-sm border-2 border-accent rounded bg-background text-foreground text-center focus:outline-none focus:ring-2 focus:ring-accent"
                           autoFocus
                         />
-                        <button onClick={handleEditSave} className="p-1 text-accent rounded">
+                        <button onClick={handleEditSave} className="p-1.5 text-accent rounded hover:bg-accent/10 transition-colors">
                           <Check className="w-4 h-4" />
                         </button>
-                        <button onClick={handleEditCancel} className="p-1 text-muted-foreground rounded">
+                        <button onClick={handleEditCancel} className="p-1.5 text-muted-foreground rounded hover:bg-muted transition-colors">
                           <X className="w-4 h-4" />
                         </button>
                       </div>
                     ) : (
-                      <div className="flex items-center justify-center gap-2">
+                      <div className="flex items-center justify-center gap-1.5 min-h-[32px]">
                         <span className="font-semibold text-foreground">{formatCurrency(offer.monthly_payment)}</span>
                         <button
                           onClick={() => handleEditStart('monthly_payment', idx, offer.monthly_payment)}
-                          className="p-1 text-accent rounded"
+                          className="p-1 text-accent rounded hover:bg-accent/10 transition-colors flex-shrink-0"
+                          title="Edit monthly payment"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
@@ -424,12 +433,14 @@ export function ResultsTable({ offers, propertyAddress = 'Property Address', ask
 
               {/* Editable: Balloon Period */}
               <tr className="border-b border-border bg-accent/5 border-l-4 border-l-accent">
-                <td className="py-3 px-4 font-semibold text-foreground sticky left-0 bg-accent/5 border-r border-border flex items-center gap-2">
-                  <span>Balloon Period</span>
-                  <span className="text-xs text-white font-normal">(Editable)</span>
+                <td className="py-3 px-4 font-semibold text-foreground sticky left-0 bg-accent/5 border-r border-border">
+                  <div className="flex items-center gap-2">
+                    <span>Balloon Period</span>
+                    <span className="text-xs text-white font-normal whitespace-nowrap">(Editable)</span>
+                  </div>
                 </td>
                 {editableOffers.map((offer, idx) => (
-                  <td key={offer.offer_type} className="py-3 px-4 text-center border-l border-border">
+                  <td key={offer.offer_type} className="py-3 px-4 border-l border-border">
                     {editingRow === 'balloon_year' && editingColumn === idx ? (
                       <div className="flex items-center justify-center gap-2">
                         <input
@@ -440,23 +451,24 @@ export function ResultsTable({ offers, propertyAddress = 'Property Address', ask
                             if (e.key === 'Enter') handleEditSave()
                             if (e.key === 'Escape') handleEditCancel()
                           }}
-                          className="w-20 px-2 py-1 text-sm border-2 border-accent rounded bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                          className="w-20 px-2 py-1.5 text-sm border-2 border-accent rounded bg-background text-foreground text-center focus:outline-none focus:ring-2 focus:ring-accent"
                           autoFocus
                         />
                         <span className="text-sm text-foreground">years</span>
-                        <button onClick={handleEditSave} className="p-1 text-accent rounded">
+                        <button onClick={handleEditSave} className="p-1.5 text-accent rounded hover:bg-accent/10 transition-colors">
                           <Check className="w-4 h-4" />
                         </button>
-                        <button onClick={handleEditCancel} className="p-1 text-muted-foreground rounded">
+                        <button onClick={handleEditCancel} className="p-1.5 text-muted-foreground rounded hover:bg-muted transition-colors">
                           <X className="w-4 h-4" />
                         </button>
                       </div>
                     ) : (
-                      <div className="flex items-center justify-center gap-2">
+                      <div className="flex items-center justify-center gap-1.5 min-h-[32px]">
                         <span className="font-semibold text-foreground">{offer.balloon_period} years</span>
                         <button
                           onClick={() => handleEditStart('balloon_year', idx, offer.balloon_period)}
-                          className="p-1 text-accent rounded"
+                          className="p-1 text-accent rounded hover:bg-accent/10 transition-colors flex-shrink-0"
+                          title="Edit balloon period"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
@@ -503,12 +515,14 @@ export function ResultsTable({ offers, propertyAddress = 'Property Address', ask
               {/* Editable: Rehab Cost (min $6000) */}
               {editableOffers.some(o => o.rehab_cost > 0) && (
                 <tr className="border-b border-border bg-accent/5 border-l-4 border-l-accent">
-                  <td className="py-3 px-4 font-semibold text-foreground sticky left-0 bg-accent/5 border-r border-border flex items-center gap-2">
-                    <span>Rehab Cost</span>
-                    <span className="text-xs text-white font-normal">(Editable, min $6K)</span>
+                  <td className="py-3 px-4 font-semibold text-foreground sticky left-0 bg-accent/5 border-r border-border">
+                    <div className="flex items-center gap-2">
+                      <span>Rehab Cost</span>
+                      <span className="text-xs text-white font-normal whitespace-nowrap">(Editable, min $6K)</span>
+                    </div>
                   </td>
                   {editableOffers.map((offer, idx) => (
-                    <td key={offer.offer_type} className="py-3 px-4 text-center border-l border-border">
+                    <td key={offer.offer_type} className="py-3 px-4 border-l border-border">
                       {editingRow === 'rehab_cost' && editingColumn === idx ? (
                         <div className="flex items-center justify-center gap-2">
                           <input
@@ -520,31 +534,32 @@ export function ResultsTable({ offers, propertyAddress = 'Property Address', ask
                               if (e.key === 'Escape') handleEditCancel()
                             }}
                             min="6000"
-                            className="w-24 px-2 py-1 text-sm border-2 border-accent rounded bg-background text-foreground"
+                            className="w-28 px-2 py-1.5 text-sm border-2 border-accent rounded bg-background text-foreground text-center focus:outline-none focus:ring-2 focus:ring-accent"
                             autoFocus
                           />
                           <button
                             onClick={handleEditSave}
-                            className="p-1 text-accent rounded hover:bg-accent/10"
+                            className="p-1.5 text-accent rounded hover:bg-accent/10 transition-colors"
                           >
                             <Check className="w-4 h-4" />
                           </button>
                           <button
                             onClick={handleEditCancel}
-                            className="p-1 text-muted-foreground rounded hover:bg-muted"
+                            className="p-1.5 text-muted-foreground rounded hover:bg-muted transition-colors"
                           >
                             <X className="w-4 h-4" />
                           </button>
                         </div>
                       ) : (
-                        <div className="flex items-center justify-center gap-2">
+                        <div className="flex items-center justify-center gap-1.5 min-h-[32px]">
                           <span className="font-semibold text-muted-foreground">
                             {offer.rehab_cost > 0 ? formatCurrency(offer.rehab_cost) : '—'}
                           </span>
                           {offer.rehab_cost > 0 && (
                             <button
                               onClick={() => handleEditStart('rehab_cost', idx, offer.rehab_cost)}
-                              className="p-1 text-accent rounded hover:bg-accent/10"
+                              className="p-1 text-accent rounded hover:bg-accent/10 transition-colors flex-shrink-0"
+                              title="Edit rehab cost"
                             >
                               <Edit2 className="w-3.5 h-3.5" />
                             </button>

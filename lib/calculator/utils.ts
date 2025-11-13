@@ -45,8 +45,9 @@ export class CalculatorUtils {
       reasons.push(`Marginal cash flow ($${monthlyCashFlow.toFixed(0)}/month) - minimum $200 recommended`)
     }
 
-    if (netRentalYield < minYield + 2 && netRentalYield >= minYield - 5) {
-      reasons.push(`Net rental yield (${netRentalYield.toFixed(1)}%) is near minimum threshold (${minYield}%)`)
+    // Only flag as marginal if yield is BELOW minimum threshold (not just near it)
+    if (netRentalYield < minYield && netRentalYield >= minYield - 5) {
+      reasons.push(`Net rental yield (${netRentalYield.toFixed(1)}%) is below minimum threshold (${minYield}%)`)
     }
 
     if (amortizationYears > 35) {
