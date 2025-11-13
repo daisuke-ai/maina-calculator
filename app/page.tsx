@@ -3,9 +3,9 @@
 import React, { useState } from 'react'
 import { AddressInput } from '@/components/AddressInput'
 import { FinancialDetailsForm } from '@/components/FinancialDetailsForm'
-import { ConfigurationDisplay } from '@/components/ConfigurationDisplay'
+// import { ConfigurationDisplay } from '@/components/ConfigurationDisplay' // Hidden from frontend
 import { ResultsTable } from '@/components/ResultsTable'
-import { InputSummary } from '@/components/InputSummary'
+// import { InputSummary } from '@/components/InputSummary' // Hidden from frontend
 import { PropertyAPIData, PropertyData, OfferResult } from '@/lib/calculator/types'
 import { TrendingUp, RotateCcw, AlertCircle, Calculator } from 'lucide-react'
 
@@ -110,7 +110,7 @@ export default function Home() {
               onFormChange={handleFormChange}
             />
 
-            <ConfigurationDisplay />
+            {/* ConfigurationDisplay hidden from frontend - still available on backend */}
 
             {/* Action Buttons */}
             <div className="w-full max-w-4xl mx-auto mt-8">
@@ -190,15 +190,14 @@ export default function Home() {
             </div>
 
             {/* Step 3: Results */}
-            {offers.length > 0 && (
+            {offers.length > 0 && propertyData && (
               <div id="results-section" className="scroll-mt-8">
-                <InputSummary
-                  propertyAPIData={propertyAPIData}
-                  propertyData={propertyData}
-                />
+                {/* InputSummary hidden from frontend */}
                 <ResultsTable
                   offers={offers}
                   propertyAddress={propertyAPIData.ADDRESS}
+                  askingPrice={propertyData.listed_price}
+                  monthlyRent={propertyData.monthly_rent}
                 />
               </div>
             )}

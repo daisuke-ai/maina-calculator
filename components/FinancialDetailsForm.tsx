@@ -11,7 +11,9 @@ import {
   Building2,
   Plus,
   Info,
-  TrendingUp
+  TrendingUp,
+  Lock,
+  Unlock
 } from 'lucide-react'
 
 interface FinancialDetailsFormProps {
@@ -30,6 +32,7 @@ interface InputFieldProps {
   onChange: (name: keyof PropertyData, value: number) => void
   showTooltip: string | null
   setShowTooltip: (name: string | null) => void
+  disabled?: boolean
 }
 
 const InputField = React.memo(({
@@ -42,7 +45,8 @@ const InputField = React.memo(({
   tooltip,
   onChange,
   showTooltip,
-  setShowTooltip
+  setShowTooltip,
+  disabled = false
 }: InputFieldProps) => {
   const [localValue, setLocalValue] = React.useState(value.toString())
   const [isFocused, setIsFocused] = React.useState(false)
@@ -116,7 +120,8 @@ const InputField = React.memo(({
           onChange={handleLocalChange}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          className="w-full h-9 pl-7 pr-3 text-sm font-semibold text-foreground bg-background border-2 border-border rounded-lg transition-all duration-200 hover:border-ring focus:border-ring focus:ring-2 focus:ring-ring/20 outline-none"
+          disabled={disabled}
+          className="w-full h-9 pl-7 pr-3 text-sm font-semibold text-foreground bg-background border-2 border-border rounded-lg transition-all duration-200 hover:border-ring focus:border-ring focus:ring-2 focus:ring-ring/20 outline-none disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-border"
         />
       </div>
     </div>
@@ -139,6 +144,7 @@ export function FinancialDetailsForm({
   })
 
   const [showTooltip, setShowTooltip] = React.useState<string | null>(null)
+  const [isLocked, setIsLocked] = React.useState(true)
 
   React.useEffect(() => {
     onFormChange(formData)
@@ -179,23 +185,23 @@ export function FinancialDetailsForm({
           </div>
         </div>
 
-        {/* Summary Inline */}
-        <div className="flex items-center gap-6">
-          <div className="text-right">
-            <p className="text-xs text-muted-foreground">Income</p>
-            <p className="text-lg font-bold text-accent">{formatCurrency(formData.monthly_rent)}</p>
-          </div>
-          <div className="text-right">
-            <p className="text-xs text-muted-foreground">Expenses</p>
-            <p className="text-lg font-bold text-destructive">{formatCurrency(calculateMonthlyExpenses())}</p>
-          </div>
-          <div className="text-right px-4 py-2 bg-muted rounded-lg border-2 border-border">
-            <p className="text-xs text-muted-foreground">Net Cash Flow</p>
-            <p className={`text-lg font-bold ${calculateNetIncome() >= 0 ? 'text-accent' : 'text-destructive'}`}>
-              {formatCurrency(calculateNetIncome())}
-            </p>
-          </div>
-        </div>
+        {/* Lock/Unlock Button */}
+        <button
+          onClick={() => setIsLocked(!isLocked)}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-card border-2 border-border hover:border-accent transition-all duration-200 hover:scale-105"
+        >
+          {isLocked ? (
+            <>
+              <Lock className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-medium text-foreground">Unlock to Edit</span>
+            </>
+          ) : (
+            <>
+              <Unlock className="w-4 h-4 text-accent" />
+              <span className="text-sm font-medium text-accent">Unlocked</span>
+            </>
+          )}
+        </button>
       </div>
 
       {/* Main Card */}
@@ -220,6 +226,7 @@ export function FinancialDetailsForm({
                 onChange={handleFieldChange}
                 showTooltip={showTooltip}
                 setShowTooltip={setShowTooltip}
+                disabled={isLocked}
               />
               <InputField
                 icon={TrendingUp}
@@ -232,6 +239,7 @@ export function FinancialDetailsForm({
                 onChange={handleFieldChange}
                 showTooltip={showTooltip}
                 setShowTooltip={setShowTooltip}
+                disabled={isLocked}
               />
             </div>
 
@@ -252,6 +260,7 @@ export function FinancialDetailsForm({
                 onChange={handleFieldChange}
                 showTooltip={showTooltip}
                 setShowTooltip={setShowTooltip}
+                disabled={isLocked}
               />
               <InputField
                 icon={Shield}
@@ -264,6 +273,7 @@ export function FinancialDetailsForm({
                 onChange={handleFieldChange}
                 showTooltip={showTooltip}
                 setShowTooltip={setShowTooltip}
+                disabled={isLocked}
               />
               <InputField
                 icon={Building2}
@@ -276,6 +286,7 @@ export function FinancialDetailsForm({
                 onChange={handleFieldChange}
                 showTooltip={showTooltip}
                 setShowTooltip={setShowTooltip}
+                disabled={isLocked}
               />
               <InputField
                 icon={Plus}
@@ -288,6 +299,7 @@ export function FinancialDetailsForm({
                 onChange={handleFieldChange}
                 showTooltip={showTooltip}
                 setShowTooltip={setShowTooltip}
+                disabled={isLocked}
               />
             </div>
           </div>

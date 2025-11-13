@@ -1,0 +1,216 @@
+// lib/supabase/email-tracking.ts
+
+import { createClient } from '@supabase/supabase-js';
+import { LOIEmailRequest, LOIEmailRecord } from '@/types/loi';
+
+// Initialize Supabase client with service role key (server-side only)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+/**
+ * Create new LOI email record in database
+ */
+export async function createLOIEmailRecord(
+  request: LOIEmailRequest,
+  trackingId: string,
+  resendEmailId?: string
+): Promise<{ success: boolean; emailId?: string; error?: string }> {
+  try {
+    const { data, error } = await supabase
+      .from('loi_emails')
+      .insert({
+        tracking_id: trackingId,
+        agent_id: request.agentId,
+        agent_email: request.agentEmail,
+        agent_name: request.agentName,
+        agent_phone: request.agentPhone,
+        realtor_email: request.realtorEmail,
+        realtor_name: request.realtorName,
+        property_address: request.propertyAddress,
+        offer_type: request.offerType,
+        offer_price: request.offerPrice,
+        down_payment: request.downPayment,
+        monthly_payment: request.monthlyPayment,
+        balloon_year: request.balloonYear,
+        closing_costs: request.closingCosts,
+        closing_days: request.closingDays,
+        status: 'sent',
+        resend_email_id: resendEmailId,
+      })
+      .select('id')
+      .single();
+
+    if (error) {
+      console.error('[Supabase Insert Error]', error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, emailId: data.id };
+  } catch (error: any) {
+    console.error('[createLOIEmailRecord Error]', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Update email status
+ */
+export async function updateEmailStatus(
+  trackingId: string,
+  status: 'delivered' | 'failed',
+  errorMessage?: string
+): Promise<void> {
+  try {
+    const updates: any = { status };
+
+    if (status === 'delivered') {
+      updates.delivered_at = new Date().toISOString();
+    }
+
+    if (errorMessage) {
+      updates.error_message = errorMessage;
+    }
+
+    await supabase
+      .from('loi_emails')
+      .update(updates)
+      .eq('tracking_id', trackingId);
+  } catch (error) {
+    console.error('[updateEmailStatus Error]', error);
+  }
+}
+
+/**
+ * Update email opened status
+ */
+export async function updateEmailOpened(trackingId: string): Promise<void> {
+  try {
+    // Increment open count and set opened flag
+    const { data: current } = await supabase
+      .from('loi_emails')
+      .select('open_count, opened_at')
+      .eq('tracking_id', trackingId)
+      .single();
+
+    const updates: any = {
+      opened: true,
+      open_count: (current?.open_count || 0) + 1,
+    };
+
+    // Set opened_at timestamp only on first open
+    if (!current?.opened_at) {
+      updates.opened_at = new Date().toISOString();
+    }
+
+    await supabase
+      .from('loi_emails')
+      .update(updates)
+      .eq('tracking_id', trackingId);
+  } catch (error) {
+    console.error('[updateEmailOpened Error]', error);
+  }
+}
+
+/**
+ * Update email clicked status
+ */
+export async function updateEmailClicked(trackingId: string): Promise<void> {
+  try {
+    // Increment click count
+    const { data: current } = await supabase
+      .from('loi_emails')
+      .select('click_count, clicked_at')
+      .eq('tracking_id', trackingId)
+      .single();
+
+    const updates: any = {
+      clicked: true,
+      click_count: (current?.click_count || 0) + 1,
+    };
+
+    if (!current?.clicked_at) {
+      updates.clicked_at = new Date().toISOString();
+    }
+
+    await supabase
+      .from('loi_emails')
+      .update(updates)
+      .eq('tracking_id', trackingId);
+  } catch (error) {
+    console.error('[updateEmailClicked Error]', error);
+  }
+}
+
+/**
+ * Update email replied status
+ */
+export async function updateEmailReplied(trackingId: string): Promise<void> {
+  try {
+    await supabase
+      .from('loi_emails')
+      .update({
+        replied: true,
+        replied_at: new Date().toISOString(),
+      })
+      .eq('tracking_id', trackingId);
+  } catch (error) {
+    console.error('[updateEmailReplied Error]', error);
+  }
+}
+
+/**
+ * Log email event
+ */
+export async function logEmailEvent(
+  trackingId: string,
+  eventType: string,
+  eventData: Record<string, any>
+): Promise<void> {
+  try {
+    // Get email_id from tracking_id
+    const { data: email } = await supabase
+      .from('loi_emails')
+      .select('id')
+      .eq('tracking_id', trackingId)
+      .single();
+
+    if (!email) {
+      console.error('[logEmailEvent] Email not found:', trackingId);
+      return;
+    }
+
+    await supabase.from('email_events').insert({
+      email_id: email.id,
+      tracking_id: trackingId,
+      event_type: eventType,
+      event_data: eventData,
+    });
+  } catch (error) {
+    console.error('[logEmailEvent Error]', error);
+  }
+}
+
+/**
+ * Get all emails sent by an agent
+ */
+export async function getAgentEmails(agentId: number): Promise<LOIEmailRecord[]> {
+  try {
+    const { data, error } = await supabase
+      .from('loi_emails')
+      .select('*')
+      .eq('agent_id', agentId)
+      .order('sent_at', { ascending: false });
+
+    if (error) {
+      console.error('[getAgentEmails Error]', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('[getAgentEmails Error]', error);
+    return [];
+  }
+}
