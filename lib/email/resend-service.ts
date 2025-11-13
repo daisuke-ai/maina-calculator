@@ -14,7 +14,7 @@ const COMPANY_CONFIG = {
   name: 'MIANA',
   type: 'REIT (Real Estate Investment Trust)',
   senderEmail: 'mian@miana.com.co',
-  senderName: 'MIANA Investment Team',
+  senderName: 'MIANA',
   recentDeals: [
     {
       address: '1016 Sedona Pines Dr',
@@ -73,7 +73,7 @@ export async function sendLOIEmail(
       to: [request.realtorEmail],
       cc: [request.agentEmail], // CC the agent
       replyTo: replyToAddress, // Track replies
-      subject: `Letter of Intent - ${request.propertyAddress} (${request.offerType})`,
+      subject: `Letter of Intent - ${request.propertyAddress}`,
       html: htmlContent,
       text: textContent,
       attachments: attachments,
