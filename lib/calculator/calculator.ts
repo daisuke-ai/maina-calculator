@@ -235,11 +235,23 @@ export class SellerFinanceCalculator {
     const principal_paid = monthly_payment * 12 * balloon_period
     const balloon_payment = loan_amount > principal_paid ? loan_amount - principal_paid : 0
 
+    // Evaluate deal viability
+    const { viability, reasons } = this.utils.evaluateDealViability(
+      offer_type,
+      down_payment,
+      dp_percent,
+      monthly_cash_flow,
+      net_rental_yield,
+      amortization_years
+    )
+
     // All deals are shown now (no buyability checks)
     return {
       offer_type,
       is_buyable: true,
       unbuyable_reason: '',
+      deal_viability: viability,
+      viability_reasons: reasons,
       final_offer_price: offer_price,
       final_coc_percent: coc,
       final_monthly_cash_flow: monthly_cash_flow,

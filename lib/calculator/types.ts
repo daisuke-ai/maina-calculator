@@ -8,10 +8,14 @@ export interface PropertyData {
   monthly_other_fees: number
 }
 
+export type DealViability = 'not_viable' | 'marginal' | 'good'
+
 export interface OfferResult {
   offer_type: 'Max Owner Favored' | 'Balanced' | 'Max Buyer Favored'
   is_buyable: boolean
   unbuyable_reason: string
+  deal_viability: DealViability
+  viability_reasons: string[]
   final_offer_price: number
   rehab_cost: number
   final_entry_fee_percent: number

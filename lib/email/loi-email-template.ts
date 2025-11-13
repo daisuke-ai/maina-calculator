@@ -10,6 +10,7 @@ export function generateLOIEmailHTML(data: LOIEmailTemplateData): string {
   const {
     agentName,
     agentPhone,
+    realtorName,
     propertyAddress,
     offerType,
     askingPrice,
@@ -43,7 +44,7 @@ export function generateLOIEmailHTML(data: LOIEmailTemplateData): string {
   </style>
 </head>
 <body>
-<p>Hi ${agentName},</p>
+<p>Hi ${realtorName || 'there'},</p>
 
 <p>This is ${agentName}, we just spoke. We're looking to burn some capital gains and are ready to close on the property within ${closingDays} days, if the seller is prepared.</p>
 
@@ -94,6 +95,7 @@ export function generateLOIEmailText(data: LOIEmailTemplateData): string {
   const {
     agentName,
     agentPhone,
+    realtorName,
     propertyAddress,
     offerType,
     offerPrice,
@@ -108,7 +110,7 @@ export function generateLOIEmailText(data: LOIEmailTemplateData): string {
   } = data;
 
   return `
-Hi ${agentName},
+Hi ${realtorName || 'there'},
 
 This is ${agentName}, we just spoke. We're looking to burn some capital gains and are ready to close on the property within ${closingDays} days, if the seller is prepared.
 

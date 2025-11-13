@@ -43,6 +43,7 @@ export async function sendLOIEmail(
     const templateData = {
       agentName: request.agentName,
       agentPhone: request.agentPhone,
+      realtorName: request.realtorName,
       propertyAddress: request.propertyAddress,
       offerType: request.offerType,
       askingPrice: request.askingPrice,
@@ -64,15 +65,12 @@ export async function sendLOIEmail(
     // Load PDF attachments from public/pdfs directory
     const attachments = await loadPDFAttachments();
 
-    // Construct reply-to address for tracking
-    const replyToAddress = `replies+agent-${request.agentId}-${trackingId}@miana.com.co`;
-
     // Send email via Resend
     const { data, error } = await resend.emails.send({
       from: `${COMPANY_CONFIG.senderName} <${COMPANY_CONFIG.senderEmail}>`,
       to: [request.realtorEmail],
       cc: [request.agentEmail], // CC the agent
-      replyTo: replyToAddress, // Track replies
+      replyTo: COMPANY_CONFIG.senderEmail, // Replies go to main company email
       subject: `Letter of Intent - ${request.propertyAddress}`,
       html: htmlContent,
       text: textContent,

@@ -12,6 +12,8 @@ import {
   TrendingUp,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
+  XCircle,
   Mail,
   Edit2,
   Check,
@@ -182,6 +184,50 @@ export function ResultsTable({ offers, propertyAddress = 'Property Address', ask
                 <td colSpan={editableOffers.length + 1} className="py-2.5 px-4 text-xs font-bold text-foreground uppercase tracking-wide border-r border-border">
                   Key Metrics
                 </td>
+              </tr>
+
+              {/* Deal Viability Status */}
+              <tr className="border-b-2 border-border">
+                <td className="py-4 px-4 font-bold text-foreground sticky left-0 bg-background border-r border-border">
+                  Deal Status
+                </td>
+                {editableOffers.map((offer) => {
+                  const viability = offer.deal_viability
+                  let icon, bgColor, textColor, statusLabel
+
+                  if (viability === 'not_viable') {
+                    icon = <XCircle className="w-5 h-5" />
+                    bgColor = 'bg-red-500/10'
+                    textColor = 'text-red-500'
+                    statusLabel = 'Not Viable'
+                  } else if (viability === 'marginal') {
+                    icon = <AlertTriangle className="w-5 h-5" />
+                    bgColor = 'bg-yellow-500/10'
+                    textColor = 'text-yellow-500'
+                    statusLabel = 'Marginal'
+                  } else {
+                    icon = <CheckCircle2 className="w-5 h-5" />
+                    bgColor = 'bg-accent/10'
+                    textColor = 'text-accent'
+                    statusLabel = 'Good Deal'
+                  }
+
+                  return (
+                    <td key={offer.offer_type} className="py-4 px-4 border-l border-border">
+                      <div className={`flex flex-col items-center gap-2 ${bgColor} rounded-lg p-3`}>
+                        <div className={`flex items-center gap-2 ${textColor}`}>
+                          {icon}
+                          <span className="font-bold text-sm">{statusLabel}</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground text-center">
+                          {offer.viability_reasons.map((reason, idx) => (
+                            <div key={idx} className="mt-1">{reason}</div>
+                          ))}
+                        </div>
+                      </div>
+                    </td>
+                  )
+                })}
               </tr>
 
               {/* Editable: Offer Price */}

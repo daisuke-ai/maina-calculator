@@ -1,7 +1,77 @@
-import { CalculatorConfig } from './types'
+import { CalculatorConfig, DealViability } from './types'
 
 export class CalculatorUtils {
   constructor(private config: CalculatorConfig) {}
+
+  /**
+   * Evaluate deal viability based on key metrics
+   */
+  evaluateDealViability(
+    offerType: 'Max Owner Favored' | 'Balanced' | 'Max Buyer Favored',
+    downPayment: number,
+    downPaymentPercent: number,
+    monthlyCashFlow: number,
+    netRentalYield: number,
+    amortizationYears: number
+  ): { viability: DealViability; reasons: string[] } {
+    const reasons: string[] = []
+
+    // Get target yield range for this offer type
+    const targetYieldRange = this.getTargetYieldRange(offerType)
+    const minYield = targetYieldRange[0]
+
+    // Check for "Not Viable" conditions (red flags)
+    if (downPayment < 0) {
+      reasons.push('Negative down payment - deal requires more cash than available')
+      return { viability: 'not_viable', reasons }
+    }
+
+    if (monthlyCashFlow < 100) {
+      reasons.push(`Monthly cash flow too low ($${monthlyCashFlow.toFixed(0)}) - minimum $100 required`)
+      return { viability: 'not_viable', reasons }
+    }
+
+    if (netRentalYield < minYield - 5) {
+      reasons.push(`Net rental yield (${netRentalYield.toFixed(1)}%) is ${(minYield - netRentalYield).toFixed(1)}% below minimum threshold`)
+      return { viability: 'not_viable', reasons }
+    }
+
+    // Check for "Marginal" conditions (yellow warnings)
+    if (downPaymentPercent < 3) {
+      reasons.push(`Low down payment (${downPaymentPercent.toFixed(1)}%) - less than 3% of offer price`)
+    }
+
+    if (monthlyCashFlow >= 100 && monthlyCashFlow < 200) {
+      reasons.push(`Marginal cash flow ($${monthlyCashFlow.toFixed(0)}/month) - minimum $200 recommended`)
+    }
+
+    if (netRentalYield < minYield + 2 && netRentalYield >= minYield - 5) {
+      reasons.push(`Net rental yield (${netRentalYield.toFixed(1)}%) is near minimum threshold (${minYield}%)`)
+    }
+
+    if (amortizationYears > 35) {
+      reasons.push(`Very long amortization (${amortizationYears} years) - payoff takes over 35 years`)
+    }
+
+    if (reasons.length > 0) {
+      return { viability: 'marginal', reasons }
+    }
+
+    // If no red flags or warnings, it's a good deal
+    reasons.push('All metrics meet or exceed target thresholds')
+    return { viability: 'good', reasons }
+  }
+
+  private getTargetYieldRange(offerType: 'Max Owner Favored' | 'Balanced' | 'Max Buyer Favored'): [number, number] {
+    switch (offerType) {
+      case 'Max Owner Favored':
+        return this.config.offers.owner_favored.net_rental_yield_range
+      case 'Balanced':
+        return this.config.offers.balanced.net_rental_yield_range
+      case 'Max Buyer Favored':
+        return this.config.offers.buyer_favored.net_rental_yield_range
+    }
+  }
 
   calculateNetRentalYield(annual_net_income: number, entry_fee: number): number {
     if (entry_fee <= 0) return 0.0

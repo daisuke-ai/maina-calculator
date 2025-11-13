@@ -125,6 +125,7 @@ export interface LOIModalFormData {
 export interface LOIEmailTemplateData {
   agentName: string;
   agentPhone?: string;
+  realtorName?: string;
   propertyAddress: string;
   offerType: 'Max Owner Favored' | 'Balanced' | 'Max Buyer Favored';
   askingPrice: number;
