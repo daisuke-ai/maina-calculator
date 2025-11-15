@@ -144,7 +144,13 @@ export function FinancialDetailsForm({
   })
 
   const [showTooltip, setShowTooltip] = React.useState<string | null>(null)
+  // Lock fields when data is first fetched from API
   const [isLocked, setIsLocked] = React.useState(true)
+
+  // Reset lock state when propertyAPIData changes (new property fetched or Start Over clicked)
+  React.useEffect(() => {
+    setIsLocked(true) // Lock fields when new data arrives
+  }, [propertyAPIData.ADDRESS]) // Use ADDRESS as dependency to detect new property
 
   React.useEffect(() => {
     onFormChange(formData)
