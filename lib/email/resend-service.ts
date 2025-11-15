@@ -11,10 +11,10 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Company configuration
 const COMPANY_CONFIG = {
-  name: 'MIANA',
+  name: process.env.SENDER_NAME || 'Vanguard Horizon REIT',
   type: 'REIT (Real Estate Investment Trust)',
-  senderEmail: 'mian@miana.com.co',
-  senderName: 'MIANA',
+  senderEmail: process.env.SENDER_EMAIL || 'vanguardhorizon@reit.miana.com.co',
+  senderName: process.env.SENDER_NAME || 'Vanguard Horizon REIT',
   recentDeals: [
     {
       address: '1016 Sedona Pines Dr',
@@ -69,9 +69,8 @@ export async function sendLOIEmail(
     const { data, error } = await resend.emails.send({
       from: `${COMPANY_CONFIG.senderName} <${COMPANY_CONFIG.senderEmail}>`,
       to: [request.realtorEmail],
-      cc: [request.agentEmail], // CC the agent
       replyTo: COMPANY_CONFIG.senderEmail, // Replies go to main company email
-      subject: `Letter of Intent - ${request.propertyAddress}`,
+      subject: `LOI for ${request.propertyAddress}`, // Property address in subject for reply matching
       html: htmlContent,
       text: textContent,
       attachments: attachments,
@@ -95,7 +94,7 @@ export async function sendLOIEmail(
       emailId: data?.id,
       trackingId,
       to: request.realtorEmail,
-      cc: request.agentEmail,
+      propertyAddress: request.propertyAddress,
     });
 
     return {

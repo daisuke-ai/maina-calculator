@@ -214,3 +214,85 @@ export async function getAgentEmails(agentId: number): Promise<LOIEmailRecord[]>
     return [];
   }
 }
+
+/**
+ * Find LOI by property address (case-insensitive)
+ * Used for matching email replies back to original LOIs
+ */
+export async function findLOIByPropertyAddress(propertyAddress: string): Promise<any | null> {
+  try {
+    // First, try exact match (case-insensitive)
+    let { data, error } = await supabase
+      .from('loi_emails')
+      .select('*')
+      .ilike('property_address', propertyAddress)
+      .eq('replied', false)
+      .order('sent_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      // PGRST116 = no rows found, which is okay for fallback
+      console.error('[findLOIByPropertyAddress Error]', error);
+    }
+
+    if (data) {
+      return data;
+    }
+
+    // Fallback: Try partial match if exact match fails
+    const { data: partialData } = await supabase
+      .from('loi_emails')
+      .select('*')
+      .ilike('property_address', `%${propertyAddress}%`)
+      .eq('replied', false)
+      .order('sent_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    return partialData;
+  } catch (error) {
+    console.error('[findLOIByPropertyAddress Error]', error);
+    return null;
+  }
+}
+
+/**
+ * Store email reply content
+ */
+export async function storeEmailReply(reply: {
+  loiTrackingId: string;
+  agentId: number;
+  agentName: string;
+  fromEmail: string;
+  toEmail: string;
+  subject: string | null;
+  htmlContent: string | null;
+  textContent: string | null;
+  messageId: string | null;
+}): Promise<void> {
+  try {
+    const { error } = await supabase.from('email_replies').insert({
+      loi_tracking_id: reply.loiTrackingId,
+      agent_id: reply.agentId,
+      agent_name: reply.agentName,
+      from_email: reply.fromEmail,
+      to_email: reply.toEmail,
+      subject: reply.subject,
+      html_content: reply.htmlContent,
+      text_content: reply.textContent,
+      message_id: reply.messageId,
+      received_at: new Date().toISOString(),
+    });
+
+    if (error) {
+      console.error('[storeEmailReply Error]', error);
+      throw error;
+    }
+
+    console.log('[Email Reply Stored]', reply.loiTrackingId);
+  } catch (error) {
+    console.error('[storeEmailReply Error]', error);
+    throw error;
+  }
+}
