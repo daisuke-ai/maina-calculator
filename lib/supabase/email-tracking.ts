@@ -7,6 +7,18 @@ import { LOIEmailRequest, LOIEmailRecord } from '@/types/loi';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
+if (!supabaseUrl) {
+  console.error('[Supabase Config Error] NEXT_PUBLIC_SUPABASE_URL is not set');
+}
+
+if (!supabaseServiceKey) {
+  console.error('[Supabase Config Error] Neither SUPABASE_SERVICE_ROLE_KEY nor NEXT_PUBLIC_SUPABASE_ANON_KEY is set');
+}
+
+if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  console.warn('[Supabase Config Warning] Using ANON key instead of SERVICE_ROLE key. Database writes may fail due to RLS policies.');
+}
+
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 /**

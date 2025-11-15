@@ -47,7 +47,11 @@ export async function POST(request: NextRequest) {
     const trackingId = extractTrackingId(eventData);
 
     if (!trackingId) {
-      console.warn('[Resend Webhook] No tracking ID found in event');
+      console.warn('[Resend Webhook] No tracking ID found in event:', eventType);
+      // For email.received events without tracking (external emails), still try to handle
+      if (eventType === 'email.received') {
+        await handleEmailReply(eventData);
+      }
       return NextResponse.json({ received: true });
     }
 
@@ -120,13 +124,30 @@ export async function POST(request: NextRequest) {
  * Extract tracking_id from email tags
  */
 function extractTrackingId(eventData: any): string | null {
-  // Resend includes tags in the webhook payload
-  const tags = eventData.tags || [];
+  try {
+    // Resend includes tags in the webhook payload
+    const tags = eventData.tags;
 
-  // Find the tracking_id tag
-  const trackingTag = tags.find((tag: any) => tag.name === 'tracking_id');
+    if (!tags) {
+      return null;
+    }
 
-  return trackingTag?.value || null;
+    // Tags can be an array or an object
+    if (Array.isArray(tags)) {
+      const trackingTag = tags.find((tag: any) => tag.name === 'tracking_id');
+      return trackingTag?.value || null;
+    }
+
+    // If tags is an object, try to access directly
+    if (typeof tags === 'object') {
+      return tags.tracking_id || null;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('[extractTrackingId Error]', error);
+    return null;
+  }
 }
 
 /**
