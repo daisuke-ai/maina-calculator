@@ -7,7 +7,8 @@ import { FinancialDetailsForm } from '@/components/FinancialDetailsForm'
 import { ResultsTable } from '@/components/ResultsTable'
 // import { InputSummary } from '@/components/InputSummary' // Hidden from frontend
 import { PropertyAPIData, PropertyData, OfferResult } from '@/lib/calculator/types'
-import { TrendingUp, RotateCcw, AlertCircle, Calculator } from 'lucide-react'
+import { TrendingUp, RotateCcw, AlertCircle, Calculator, BarChart3 } from 'lucide-react'
+import Link from 'next/link'
 
 export default function Home() {
   const [propertyAPIData, setPropertyAPIData] = useState<PropertyAPIData | null>(null)
@@ -83,6 +84,16 @@ export default function Home() {
   return (
     <main className="min-h-screen py-12 px-4">
       <div className="container mx-auto max-w-7xl space-y-8">
+        {/* CRM Link - Top Right */}
+        <div className="flex justify-end">
+          <Link href="/crm">
+            <button className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors shadow-lg">
+              <BarChart3 className="w-5 h-5" />
+              CRM Dashboard
+            </button>
+          </Link>
+        </div>
+
         {/* Header Section */}
         {!propertyAPIData && (
           <div className="text-center space-y-4 mb-8">
