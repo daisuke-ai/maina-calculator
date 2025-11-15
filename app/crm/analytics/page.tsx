@@ -11,8 +11,11 @@ import {
   MessageSquare,
   Calendar,
   BarChart3,
-  Users
+  Users,
+  Download,
+  FileText
 } from 'lucide-react'
+import { downloadAnalyticsCSV, downloadAnalyticsPDF } from '@/lib/export-reports'
 
 interface OfferTypeStats {
   offer_type: string
@@ -140,13 +143,35 @@ export default function AnalyticsPage() {
             <h1 className="text-4xl md:text-5xl font-extrabold text-foreground mb-2">Analytics</h1>
             <p className="text-lg text-muted-foreground">Insights and performance metrics</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Link href="/crm">
               <button className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-xl font-medium transition-all shadow-lg border-2 border-border">
                 <ArrowLeft className="w-4 h-4" />
                 Back to CRM
               </button>
             </Link>
+
+            {/* Export Buttons */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => analytics && downloadAnalyticsCSV(analytics.offerTypes, analytics.topAgents, analytics.dailyVolume, timeRange)}
+                disabled={loading || !analytics}
+                className="flex items-center gap-2 px-4 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-xl font-medium transition-all shadow-lg border-2 border-border disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Download CSV Report"
+              >
+                <FileText className="w-4 h-4" />
+                CSV
+              </button>
+              <button
+                onClick={() => analytics && downloadAnalyticsPDF(analytics.offerTypes, analytics.topAgents, analytics.dailyVolume, timeRange)}
+                disabled={loading || !analytics}
+                className="flex items-center gap-2 px-4 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-xl font-medium transition-all shadow-lg border-2 border-border disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Download PDF Report"
+              >
+                <Download className="w-4 h-4" />
+                PDF
+              </button>
+            </div>
           </div>
         </div>
 

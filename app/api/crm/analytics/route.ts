@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const range = searchParams.get('range');
 
     // Determine days back based on range parameter
-    let daysBack = TIME_RANGES.ALL_TIME;
+    let daysBack: number = TIME_RANGES.ALL_TIME;
     if (range) {
       const rangeUpper = range.toUpperCase() as keyof typeof TIME_RANGES;
       if (rangeUpper in TIME_RANGES) {

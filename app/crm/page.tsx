@@ -15,8 +15,11 @@ import {
   MessageSquare,
   ExternalLink,
   BarChart3,
-  Calendar
+  Calendar,
+  Download,
+  FileText
 } from 'lucide-react'
+import { downloadAgentsCSV, downloadAgentsPDF } from '@/lib/export-reports'
 
 type TimeRange = 'week' | 'month' | 'quarter' | 'year' | 'all'
 
@@ -186,7 +189,7 @@ export default function CRMDashboard() {
             <h1 className="text-4xl md:text-5xl font-extrabold text-foreground mb-2">CRM Dashboard</h1>
             <p className="text-lg text-muted-foreground">Track agent performance and email analytics</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <Link href="/">
               <button className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-xl font-medium transition-all shadow-lg border-2 border-border">
                 <ExternalLink className="w-4 h-4" />
@@ -199,6 +202,28 @@ export default function CRMDashboard() {
                 Analytics
               </button>
             </Link>
+
+            {/* Export Buttons */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => downloadAgentsCSV(agents, timeRange)}
+                disabled={loading || agents.length === 0}
+                className="flex items-center gap-2 px-4 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-xl font-medium transition-all shadow-lg border-2 border-border disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Download CSV Report"
+              >
+                <FileText className="w-4 h-4" />
+                CSV
+              </button>
+              <button
+                onClick={() => downloadAgentsPDF(agents, timeRange)}
+                disabled={loading || agents.length === 0}
+                className="flex items-center gap-2 px-4 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-xl font-medium transition-all shadow-lg border-2 border-border disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Download PDF Report"
+              >
+                <Download className="w-4 h-4" />
+                PDF
+              </button>
+            </div>
           </div>
         </div>
 
