@@ -60,10 +60,95 @@ export function ResultsTable({ offers, propertyAddress = 'Property Address', ask
     setEditValue(currentValue.toString())
   }
 
+  // Recalculate dependent values when a field is edited
+  const recalculateOffer = (offer: OfferResult, editedField: string, newValue: number): OfferResult => {
+    const updated = { ...offer }
+
+    switch (editedField) {
+      case 'offer_price':
+        updated.final_offer_price = newValue
+        // Recalculate loan amount (offer price - down payment)
+        updated.loan_amount = newValue - updated.down_payment
+        // Recalculate entry fee (down payment + rehab + closing costs)
+        updated.entry_fee = updated.down_payment + updated.rehab_cost + updated.closing_costs
+        // Recalculate entry fee percentage
+        updated.entry_fee_percentage = (updated.entry_fee / newValue) * 100
+        // Recalculate down payment percentage
+        updated.down_payment_percentage = (updated.down_payment / newValue) * 100
+        break
+
+      case 'down_payment':
+        updated.down_payment = newValue
+        // Recalculate loan amount
+        updated.loan_amount = updated.final_offer_price - newValue
+        // Recalculate entry fee
+        updated.entry_fee = newValue + updated.rehab_cost + updated.closing_costs
+        // Recalculate percentages
+        updated.entry_fee_percentage = (updated.entry_fee / updated.final_offer_price) * 100
+        updated.down_payment_percentage = (newValue / updated.final_offer_price) * 100
+        break
+
+      case 'monthly_payment':
+        updated.monthly_payment = newValue
+        // Recalculate monthly cash flow (monthly rent - monthly payment - operating expenses)
+        const monthly_operating = ((updated.final_offer_price * 0.015) + (updated.final_offer_price * 0.08/12) + 100)
+        updated.monthly_cash_flow = monthlyRent - newValue - monthly_operating
+        // Recalculate net rental yield
+        const annual_net_income = updated.monthly_cash_flow * 12
+        updated.net_rental_yield = (annual_net_income / updated.entry_fee) * 100
+        // Recalculate amortization period (loan amount / monthly payment / 12)
+        updated.amortization_period = updated.loan_amount / newValue / 12
+        // Recalculate principal paid during balloon period
+        const months_until_balloon = updated.balloon_period * 12
+        updated.principal_paid = Math.min(newValue * months_until_balloon, updated.loan_amount)
+        // Recalculate balloon payment
+        updated.balloon_payment = Math.max(0, updated.loan_amount - updated.principal_paid)
+        break
+
+      case 'balloon_year':
+        const balloon_years = Math.round(newValue)
+        updated.balloon_period = balloon_years
+        // Recalculate principal paid during balloon period
+        const balloon_months = balloon_years * 12
+        updated.principal_paid = Math.min(updated.monthly_payment * balloon_months, updated.loan_amount)
+        // Recalculate balloon payment
+        updated.balloon_payment = Math.max(0, updated.loan_amount - updated.principal_paid)
+        break
+
+      case 'rehab_cost':
+        const rehab = Math.max(6000, newValue)
+        updated.rehab_cost = rehab
+        // Recalculate entry fee
+        updated.entry_fee = updated.down_payment + rehab + updated.closing_costs
+        // Recalculate entry fee percentage
+        updated.entry_fee_percentage = (updated.entry_fee / updated.final_offer_price) * 100
+        // Recalculate net rental yield (if it depends on entry fee)
+        const annual_net = updated.monthly_cash_flow * 12
+        updated.net_rental_yield = (annual_net / updated.entry_fee) * 100
+        break
+    }
+
+    // Recalculate deal status based on new values
+    const yield_threshold = 15 // 15% minimum net rental yield
+    const cash_flow_threshold = 200 // $200 minimum monthly cash flow
+
+    if (updated.net_rental_yield >= yield_threshold && updated.monthly_cash_flow >= cash_flow_threshold) {
+      updated.deal_status = 'good_deal'
+      updated.deal_status_message = 'All metrics meet or exceed target thresholds'
+    } else if (updated.net_rental_yield >= yield_threshold * 0.8 && updated.monthly_cash_flow >= cash_flow_threshold * 0.5) {
+      updated.deal_status = 'acceptable'
+      updated.deal_status_message = 'Metrics are acceptable but below optimal targets'
+    } else {
+      updated.deal_status = 'poor_deal'
+      updated.deal_status_message = 'Metrics below minimum thresholds'
+    }
+
+    return updated
+  }
+
   const handleEditSave = () => {
     if (editingRow === null || editingColumn === null) return
 
-    const newOffers = [...editableOffers]
     const numValue = parseFloat(editValue)
 
     if (isNaN(numValue)) {
@@ -71,24 +156,9 @@ export function ResultsTable({ offers, propertyAddress = 'Property Address', ask
       return
     }
 
-    switch (editingRow) {
-      case 'offer_price':
-        newOffers[editingColumn] = { ...newOffers[editingColumn], final_offer_price: numValue }
-        break
-      case 'down_payment':
-        newOffers[editingColumn] = { ...newOffers[editingColumn], down_payment: numValue }
-        break
-      case 'monthly_payment':
-        newOffers[editingColumn] = { ...newOffers[editingColumn], monthly_payment: numValue }
-        break
-      case 'balloon_year':
-        newOffers[editingColumn] = { ...newOffers[editingColumn], balloon_period: Math.round(numValue) }
-        break
-      case 'rehab_cost':
-        // Minimum $6000 for rehab cost
-        newOffers[editingColumn] = { ...newOffers[editingColumn], rehab_cost: Math.max(6000, numValue) }
-        break
-    }
+    const newOffers = [...editableOffers]
+    // Recalculate the entire offer with dependent values
+    newOffers[editingColumn] = recalculateOffer(editableOffers[editingColumn], editingRow, numValue)
 
     setEditableOffers(newOffers)
     setEditingRow(null)
