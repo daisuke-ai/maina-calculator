@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import ReplyEmailModal from '@/components/loi/ReplyEmailModal';
-import { Mail, Clock, User, MapPin, DollarSign } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { Mail, Clock, User, MapPin, DollarSign, ArrowLeft, MessageSquare } from 'lucide-react';
+import Link from 'next/link';
 
 interface EmailReply {
   id: string;
@@ -97,43 +99,56 @@ export default function EmailRepliesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen py-12 px-4 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading email replies...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading email replies...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <main className="min-h-screen py-12 px-4">
+      <div className="container mx-auto max-w-7xl space-y-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Email Replies</h1>
-          <p className="mt-2 text-gray-600">
-            View and respond to realtor replies on your LOI emails
-          </p>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-muted shadow-lg mb-4">
+              <MessageSquare className="w-8 h-8 text-accent" />
+            </div>
+            <h1 className="text-4xl md:text-5xl font-extrabold text-foreground mb-2">Email Replies</h1>
+            <p className="text-lg text-muted-foreground">View and respond to realtor replies on your LOI emails</p>
+          </div>
+          <Link href="/crm">
+            <button className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-xl font-medium transition-all shadow-lg border-2 border-border">
+              <ArrowLeft className="w-4 h-4" />
+              Back to CRM
+            </button>
+          </Link>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="p-6 bg-card border-2 border-border shadow-xl">
             <div className="flex items-center">
-              <Mail className="w-8 h-8 text-green-600" />
+              <div className="w-12 h-12 rounded-xl bg-accent/20 flex items-center justify-center">
+                <Mail className="w-6 h-6 text-accent" />
+              </div>
               <div className="ml-4">
-                <p className="text-sm text-gray-600">Total Replies</p>
-                <p className="text-2xl font-bold text-gray-900">{replies.length}</p>
+                <p className="text-sm text-muted-foreground">Total Replies</p>
+                <p className="text-2xl font-bold text-foreground">{replies.length}</p>
               </div>
             </div>
-          </div>
-          <div className="bg-white rounded-lg shadow p-6">
+          </Card>
+          <Card className="p-6 bg-card border-2 border-border shadow-xl">
             <div className="flex items-center">
-              <Clock className="w-8 h-8 text-blue-600" />
+              <div className="w-12 h-12 rounded-xl bg-accent/20 flex items-center justify-center">
+                <Clock className="w-6 h-6 text-accent" />
+              </div>
               <div className="ml-4">
-                <p className="text-sm text-gray-600">Last 24 Hours</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm text-muted-foreground">Last 24 Hours</p>
+                <p className="text-2xl font-bold text-foreground">
                   {
                     replies.filter(
                       (r) =>
@@ -144,52 +159,54 @@ export default function EmailRepliesPage() {
                 </p>
               </div>
             </div>
-          </div>
-          <div className="bg-white rounded-lg shadow p-6">
+          </Card>
+          <Card className="p-6 bg-card border-2 border-border shadow-xl">
             <div className="flex items-center">
-              <User className="w-8 h-8 text-purple-600" />
+              <div className="w-12 h-12 rounded-xl bg-accent/20 flex items-center justify-center">
+                <User className="w-6 h-6 text-accent" />
+              </div>
               <div className="ml-4">
-                <p className="text-sm text-gray-600">Unique Realtors</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm text-muted-foreground">Unique Realtors</p>
+                <p className="text-2xl font-bold text-foreground">
                   {new Set(replies.map((r) => r.from_email)).size}
                 </p>
               </div>
             </div>
-          </div>
+          </Card>
         </div>
 
         {/* Replies List */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Recent Replies</h2>
-          </div>
-
-          {replies.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              <Mail className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-              <p>No email replies yet</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-200">
+        <div>
+          <h2 className="text-2xl md:text-3xl font-extrabold text-foreground mb-6">Recent Replies</h2>
+          <Card className="bg-card border-2 border-border shadow-xl overflow-hidden">
+            {replies.length === 0 ? (
+              <div className="p-16 text-center">
+                <Mail className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-20" />
+                <p className="text-lg text-muted-foreground">No email replies yet</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-border">
               {replies.map((reply) => {
                 const loi = loiDetails[reply.loi_tracking_id];
 
                 return (
                   <div
                     key={reply.id}
-                    className="p-6 hover:bg-gray-50 transition-colors"
+                    className="p-6 hover:bg-muted/50 transition-colors"
                   >
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
                         {/* Reply Header */}
-                        <div className="flex items-center space-x-4 mb-3">
-                          <div className="flex items-center text-sm text-gray-600">
-                            <Mail className="w-4 h-4 mr-1" />
-                            <span className="font-medium text-gray-900">
+                        <div className="flex flex-wrap items-center gap-4 mb-3">
+                          <div className="flex items-center text-sm">
+                            <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center mr-2">
+                              <Mail className="w-4 h-4 text-accent" />
+                            </div>
+                            <span className="font-medium text-foreground">
                               {reply.from_email}
                             </span>
                           </div>
-                          <div className="flex items-center text-sm text-gray-500">
+                          <div className="flex items-center text-sm text-muted-foreground">
                             <Clock className="w-4 h-4 mr-1" />
                             {new Date(reply.received_at).toLocaleString()}
                           </div>
@@ -198,36 +215,36 @@ export default function EmailRepliesPage() {
                         {/* LOI Details */}
                         {loi && (
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3 text-sm">
-                            <div className="flex items-center text-gray-600">
-                              <MapPin className="w-4 h-4 mr-2 text-gray-400" />
-                              <span className="truncate">{loi.property_address}</span>
+                            <div className="flex items-center text-muted-foreground">
+                              <MapPin className="w-4 h-4 mr-2 text-accent" />
+                              <span className="truncate text-foreground">{loi.property_address}</span>
                             </div>
-                            <div className="flex items-center text-gray-600">
-                              <DollarSign className="w-4 h-4 mr-2 text-gray-400" />
-                              <span>${loi.offer_price.toLocaleString()}</span>
+                            <div className="flex items-center text-muted-foreground">
+                              <DollarSign className="w-4 h-4 mr-2 text-accent" />
+                              <span className="text-foreground">${loi.offer_price.toLocaleString()}</span>
                             </div>
-                            <div className="flex items-center text-gray-600">
-                              <User className="w-4 h-4 mr-2 text-gray-400" />
-                              <span>{loi.agent_name}</span>
+                            <div className="flex items-center text-muted-foreground">
+                              <User className="w-4 h-4 mr-2 text-accent" />
+                              <span className="text-foreground">{loi.agent_name}</span>
                             </div>
                           </div>
                         )}
 
                         {/* Subject */}
                         <div className="mb-2">
-                          <span className="text-sm font-semibold text-gray-700">
+                          <span className="text-sm font-semibold text-muted-foreground">
                             Subject:
                           </span>{' '}
-                          <span className="text-sm text-gray-900">{reply.subject}</span>
+                          <span className="text-sm text-foreground">{reply.subject}</span>
                         </div>
 
                         {/* Message Preview */}
                         {reply.text_content ? (
-                          <p className="text-sm text-gray-600 line-clamp-2">
+                          <p className="text-sm text-muted-foreground line-clamp-2">
                             {reply.text_content}
                           </p>
                         ) : (
-                          <p className="text-sm text-gray-400 italic">
+                          <p className="text-sm text-muted-foreground italic">
                             [Email content not available - click Reply to view in modal]
                           </p>
                         )}
@@ -236,7 +253,7 @@ export default function EmailRepliesPage() {
                       {/* Reply Button */}
                       <button
                         onClick={() => handleReplyClick(reply)}
-                        className="ml-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium whitespace-nowrap"
+                        className="px-4 py-2 bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl font-medium transition-all shadow-lg whitespace-nowrap"
                       >
                         Reply
                       </button>
@@ -246,6 +263,7 @@ export default function EmailRepliesPage() {
               })}
             </div>
           )}
+          </Card>
         </div>
       </div>
 
@@ -258,6 +276,6 @@ export default function EmailRepliesPage() {
           loiDetails={loiDetails[selectedReply.loi_tracking_id]}
         />
       )}
-    </div>
+    </main>
   );
 }
