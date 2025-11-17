@@ -9,6 +9,7 @@ import {
   logEmailEvent,
   storeEmailReply,
   findLOIByPropertyAddress,
+  updateResendMessageId,
 } from '@/lib/supabase/email-tracking';
 import { Resend } from 'resend';
 
@@ -62,13 +63,23 @@ export async function POST(request: NextRequest) {
     switch (eventType) {
       case 'email.sent':
         // Email accepted by Resend (already marked as 'sent' when created)
-        console.log(`[Email Sent] ${trackingId}`);
+        // Capture Message-ID for email threading
+        const sentMessageId = eventData.message_id || eventData.headers?.['message-id'];
+        if (sentMessageId) {
+          await updateResendMessageId(trackingId, sentMessageId);
+        }
+        console.log(`[Email Sent] ${trackingId}`, { messageId: sentMessageId });
         break;
 
       case 'email.delivered':
         // Email successfully delivered to recipient's mail server
         await updateEmailStatus(trackingId, 'delivered');
-        console.log(`[Email Delivered] ${trackingId}`);
+        // Also capture Message-ID if not already captured
+        const deliveredMessageId = eventData.message_id || eventData.headers?.['message-id'];
+        if (deliveredMessageId) {
+          await updateResendMessageId(trackingId, deliveredMessageId);
+        }
+        console.log(`[Email Delivered] ${trackingId}`, { messageId: deliveredMessageId });
         break;
 
       case 'email.delivery_delayed':

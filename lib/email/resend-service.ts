@@ -102,6 +102,8 @@ export async function sendLOIEmail(
     return {
       success: true,
       emailId: data?.id,
+      // Note: Message-ID is not immediately available in Resend send response
+      // It will be captured via webhook when email.sent event fires
     };
   } catch (error: any) {
     console.error('[sendLOIEmail Error]', error);

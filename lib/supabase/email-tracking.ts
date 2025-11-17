@@ -270,6 +270,55 @@ export async function findLOIByPropertyAddress(propertyAddress: string): Promise
 }
 
 /**
+ * Find LOI by tracking ID
+ */
+export async function findLOIByTrackingId(trackingId: string) {
+  try {
+    const { data, error } = await supabase
+      .from('loi_emails')
+      .select('*')
+      .eq('tracking_id', trackingId)
+      .single();
+
+    if (error) {
+      console.error('[findLOIByTrackingId Error]', error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('[findLOIByTrackingId Error]', error);
+    return null;
+  }
+}
+
+/**
+ * Update resend_message_id for sent LOI email
+ * Called when webhook receives email.sent or email.delivered event
+ */
+export async function updateResendMessageId(
+  trackingId: string,
+  messageId: string
+): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('loi_emails')
+      .update({ resend_message_id: messageId })
+      .eq('tracking_id', trackingId);
+
+    if (error) {
+      console.error('[updateResendMessageId Error]', error);
+      throw error;
+    }
+
+    console.log('[Message ID Updated]', { trackingId, messageId });
+  } catch (error) {
+    console.error('[updateResendMessageId Error]', error);
+    throw error;
+  }
+}
+
+/**
  * Store email reply content
  */
 export async function storeEmailReply(reply: {
@@ -282,20 +331,24 @@ export async function storeEmailReply(reply: {
   htmlContent: string | null;
   textContent: string | null;
   messageId: string | null;
-}): Promise<void> {
+}): Promise<{ id?: string; error?: string }> {
   try {
-    const { error } = await supabase.from('email_replies').insert({
-      loi_tracking_id: reply.loiTrackingId,
-      agent_id: reply.agentId,
-      agent_name: reply.agentName,
-      from_email: reply.fromEmail,
-      to_email: reply.toEmail,
-      subject: reply.subject,
-      html_content: reply.htmlContent,
-      text_content: reply.textContent,
-      message_id: reply.messageId,
-      received_at: new Date().toISOString(),
-    });
+    const { data, error } = await supabase
+      .from('email_replies')
+      .insert({
+        loi_tracking_id: reply.loiTrackingId,
+        agent_id: reply.agentId,
+        agent_name: reply.agentName,
+        from_email: reply.fromEmail,
+        to_email: reply.toEmail,
+        subject: reply.subject,
+        html_content: reply.htmlContent,
+        text_content: reply.textContent,
+        message_id: reply.messageId,
+        received_at: new Date().toISOString(),
+      })
+      .select('id')
+      .single();
 
     if (error) {
       console.error('[storeEmailReply Error]', error);
@@ -303,8 +356,127 @@ export async function storeEmailReply(reply: {
     }
 
     console.log('[Email Reply Stored]', reply.loiTrackingId);
-  } catch (error) {
+    return { id: data.id };
+  } catch (error: any) {
     console.error('[storeEmailReply Error]', error);
+    return { error: error.message };
+  }
+}
+
+/**
+ * Get email reply by ID
+ */
+export async function getEmailReplyById(replyId: string) {
+  try {
+    const { data, error } = await supabase
+      .from('email_replies')
+      .select('*')
+      .eq('id', replyId)
+      .single();
+
+    if (error) {
+      console.error('[getEmailReplyById Error]', error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('[getEmailReplyById Error]', error);
+    return null;
+  }
+}
+
+/**
+ * Create outbound reply record
+ */
+export async function createOutboundReply(reply: {
+  loiTrackingId: string;
+  replyToEmailReplyId?: string;
+  fromEmail: string;
+  fromName: string;
+  toEmail: string;
+  toName?: string;
+  ccEmails?: string[];
+  subject: string;
+  htmlContent: string;
+  textContent?: string;
+  inReplyTo?: string;
+  referenceIds?: string[];
+  resendEmailId?: string;
+  resendMessageId?: string;
+}): Promise<{ success: boolean; id?: string; error?: string }> {
+  try {
+    const { data, error } = await supabase
+      .from('loi_email_outbound_replies')
+      .insert({
+        loi_tracking_id: reply.loiTrackingId,
+        reply_to_email_reply_id: reply.replyToEmailReplyId || null,
+        from_email: reply.fromEmail,
+        from_name: reply.fromName,
+        to_email: reply.toEmail,
+        to_name: reply.toName || null,
+        cc_emails: reply.ccEmails || [],
+        subject: reply.subject,
+        html_content: reply.htmlContent,
+        text_content: reply.textContent || null,
+        in_reply_to: reply.inReplyTo || null,
+        reference_ids: reply.referenceIds || [],
+        resend_email_id: reply.resendEmailId || null,
+        resend_message_id: reply.resendMessageId || null,
+        status: 'sent',
+        sent_at: new Date().toISOString(),
+      })
+      .select('id')
+      .single();
+
+    if (error) {
+      console.error('[createOutboundReply Error]', error);
+      return { success: false, error: error.message };
+    }
+
+    console.log('[Outbound Reply Created]', data.id);
+    return { success: true, id: data.id };
+  } catch (error: any) {
+    console.error('[createOutboundReply Error]', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Update outbound reply status
+ */
+export async function updateOutboundReplyStatus(
+  id: string,
+  status: 'delivered' | 'failed',
+  errorMessage?: string
+): Promise<void> {
+  try {
+    const updates: any = {
+      status,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (status === 'delivered') {
+      updates.delivered_at = new Date().toISOString();
+    }
+
+    if (errorMessage) {
+      updates.error_message = errorMessage;
+    }
+
+    const { error } = await supabase
+      .from('loi_email_outbound_replies')
+      .update(updates)
+      .eq('id', id);
+
+    if (error) {
+      console.error('[updateOutboundReplyStatus Error]', error);
+      throw error;
+    }
+
+    console.log('[Outbound Reply Status Updated]', { id, status });
+  } catch (error) {
+    console.error('[updateOutboundReplyStatus Error]', error);
     throw error;
   }
 }

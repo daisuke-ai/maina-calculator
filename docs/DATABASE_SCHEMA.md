@@ -1,6 +1,6 @@
 # Miana Calculator - Database Schema Documentation
 
-**Last Updated:** January 16, 2025
+**Last Updated:** January 17, 2025
 **Database:** Supabase (PostgreSQL)
 **Project:** Miana Real Estate Investment Calculator with CRM
 
@@ -153,6 +153,94 @@ CREATE TABLE email_replies (
 - Store full reply content for CRM
 - Track response times
 - Analyze realtor engagement
+
+---
+
+### 4. `loi_email_outbound_replies`
+**Purpose:** Tracks outbound replies sent from the CRM back to realtors, maintaining email thread continuity with proper threading headers.
+
+**Schema:**
+```sql
+CREATE TABLE loi_email_outbound_replies (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  -- Link to original LOI and realtor's reply
+  loi_tracking_id TEXT NOT NULL REFERENCES loi_emails(tracking_id) ON DELETE CASCADE,
+  reply_to_email_reply_id UUID REFERENCES email_replies(id) ON DELETE SET NULL,
+
+  -- Sender (usually comms specialist or agent)
+  from_email TEXT NOT NULL,
+  from_name TEXT NOT NULL,
+
+  -- Recipient (realtor)
+  to_email TEXT NOT NULL,
+  to_name TEXT,
+
+  -- CC (optional - can CC the assigned agent)
+  cc_emails TEXT[], -- Array of email addresses
+
+  -- Email content
+  subject TEXT NOT NULL,
+  html_content TEXT NOT NULL,
+  text_content TEXT,
+
+  -- Threading headers (for email thread continuity)
+  in_reply_to TEXT, -- Message-ID of the email we're replying to
+  reference_ids TEXT[], -- Array of Message-IDs in the thread
+
+  -- Resend tracking
+  resend_email_id TEXT, -- Resend's email ID
+  resend_message_id TEXT, -- Message-ID header from Resend
+
+  -- Status tracking
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'sent', 'delivered', 'failed')),
+  sent_at TIMESTAMPTZ,
+  delivered_at TIMESTAMPTZ,
+  error_message TEXT,
+
+  -- Timestamps
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**Key Fields:**
+- `in_reply_to`: Message-ID of the realtor's email (for proper threading)
+- `reference_ids`: Chain of all Message-IDs in the conversation thread
+- `resend_message_id`: Message-ID from Resend (different from `resend_email_id`)
+
+**Relationships:**
+- `loi_tracking_id` → `loi_emails.tracking_id` (CASCADE DELETE)
+- `reply_to_email_reply_id` → `email_replies.id` (SET NULL on delete)
+
+**Threading Logic:**
+The `reference_ids` array contains the complete conversation thread:
+1. Original LOI's `resend_message_id`
+2. Realtor's reply `message_id`
+3. Any subsequent replies in the thread
+
+This ensures that replies appear in the same email thread in the realtor's inbox.
+
+**Use Cases:**
+- Send threaded replies that maintain conversation context
+- Track outbound communication with realtors
+- Maintain full audit trail of email conversations
+- Enable proper email threading in recipient's mail client
+
+---
+
+**Schema Updates (January 17, 2025):**
+
+Added `resend_message_id` to `loi_emails` table:
+```sql
+ALTER TABLE loi_emails ADD COLUMN resend_message_id TEXT;
+CREATE INDEX idx_loi_emails_resend_message_id ON loi_emails(resend_message_id);
+```
+
+This field stores the Message-ID header from Resend, which is essential for:
+- Email threading (In-Reply-To and References headers)
+- Maintaining conversation continuity
+- Proper email client threading behavior
 
 ---
 
