@@ -17,7 +17,8 @@ import {
   BarChart3,
   Calendar,
   Download,
-  FileText
+  FileText,
+  LayoutDashboard
 } from 'lucide-react'
 import { downloadAgentsCSV, downloadAgentsPDF } from '@/lib/export-reports'
 
@@ -44,8 +45,15 @@ interface AgentStats {
   last_email_sent: string | null
 }
 
+interface PipelineSummary {
+  total_active_deals: number
+  active_pipeline_value: number
+  overall_conversion_rate: number
+}
+
 export default function CRMDashboard() {
   const [agents, setAgents] = useState<AgentStats[]>([])
+  const [pipelineSummary, setPipelineSummary] = useState<PipelineSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -55,6 +63,7 @@ export default function CRMDashboard() {
 
   useEffect(() => {
     fetchAgents()
+    fetchPipelineSummary()
   }, [timeRange])
 
   const fetchAgents = async () => {
@@ -73,6 +82,19 @@ export default function CRMDashboard() {
       setError(err.message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchPipelineSummary = async () => {
+    try {
+      const response = await fetch('/api/crm/pipeline/analytics/summary?days_back=30')
+      const result = await response.json()
+
+      if (response.ok && result.summary) {
+        setPipelineSummary(result.summary.allTime)
+      }
+    } catch (err: any) {
+      console.error('Failed to fetch pipeline summary:', err)
     }
   }
 
@@ -125,7 +147,6 @@ export default function CRMDashboard() {
 
   // Calculate summary stats
   const totalSent = agents.reduce((sum, a) => sum + a.total_sent, 0)
-  const totalOpened = agents.reduce((sum, a) => sum + a.total_opened, 0)
   const totalReplied = agents.reduce((sum, a) => sum + a.total_replied, 0)
   const avgReplyRate = agents.length > 0
     ? (agents.reduce((sum, a) => sum + (a.reply_rate || 0), 0) / agents.length).toFixed(1)
@@ -202,6 +223,12 @@ export default function CRMDashboard() {
                 Analytics
               </button>
             </Link>
+            <Link href="/crm/pipeline">
+              <button className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl font-medium transition-all shadow-lg">
+                <LayoutDashboard className="w-4 h-4" />
+                Pipeline
+              </button>
+            </Link>
 
             {/* Export Buttons */}
             <div className="flex gap-2">
@@ -227,22 +254,12 @@ export default function CRMDashboard() {
           </div>
         </div>
 
-        {/* Summary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Email Summary Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="p-6 bg-card border-2 border-border shadow-xl">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Total Agents</p>
-                <p className="text-3xl font-bold text-foreground">{agents.length}</p>
-              </div>
-              <Users className="w-10 h-10 text-accent opacity-30" />
-            </div>
-          </Card>
-
-          <Card className="p-6 bg-card border-2 border-border shadow-xl">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Total Emails</p>
+                <p className="text-sm text-muted-foreground mb-1">Total Emails Sent</p>
                 <p className="text-3xl font-bold text-foreground">{totalSent.toLocaleString()}</p>
               </div>
               <Mail className="w-10 h-10 text-accent opacity-30" />
@@ -269,6 +286,53 @@ export default function CRMDashboard() {
             </div>
           </Card>
         </div>
+
+        {/* Pipeline Summary Stats */}
+        {pipelineSummary && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="p-6 bg-gradient-to-br from-green-500/10 to-green-600/5 border-2 border-green-500/30 shadow-xl">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Active Pipeline</p>
+                  <p className="text-3xl font-bold text-foreground">
+                    {new Intl.NumberFormat('en-US', {
+                      style: 'currency',
+                      currency: 'USD',
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
+                    }).format(pipelineSummary.active_pipeline_value)}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {pipelineSummary.total_active_deals} deals in pipeline
+                  </p>
+                </div>
+                <LayoutDashboard className="w-10 h-10 text-green-500 opacity-40" />
+              </div>
+            </Card>
+
+            <Card className="p-6 bg-gradient-to-br from-green-500/10 to-green-600/5 border-2 border-green-500/30 shadow-xl">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Active Deals</p>
+                  <p className="text-3xl font-bold text-foreground">{pipelineSummary.total_active_deals}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Properties under contract</p>
+                </div>
+                <TrendingUp className="w-10 h-10 text-green-500 opacity-40" />
+              </div>
+            </Card>
+
+            <Card className="p-6 bg-gradient-to-br from-green-500/10 to-green-600/5 border-2 border-green-500/30 shadow-xl">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Pipeline Conv. Rate</p>
+                  <p className="text-3xl font-bold text-green-500">{pipelineSummary.overall_conversion_rate}%</p>
+                  <p className="text-xs text-muted-foreground mt-1">All-time conversion</p>
+                </div>
+                <BarChart3 className="w-10 h-10 text-green-500 opacity-40" />
+              </div>
+            </Card>
+          </div>
+        )}
 
         {/* Time Range Selector */}
         <Card className="p-4 bg-card border-2 border-border shadow-xl">
@@ -337,12 +401,11 @@ export default function CRMDashboard() {
                       onClick={() => toggleSort('sent')}
                       className="flex items-center gap-2 font-semibold text-sm text-foreground hover:text-accent transition-colors mx-auto"
                     >
-                      Sent
+                      Emails Sent
                       <ArrowUpDown className="w-4 h-4" />
                     </button>
                   </th>
-                  <th className="px-6 py-4 text-center font-semibold text-sm text-foreground">Opened</th>
-                  <th className="px-6 py-4 text-center font-semibold text-sm text-foreground">Replied</th>
+                  <th className="px-6 py-4 text-center font-semibold text-sm text-foreground">Replies</th>
                   <th className="px-6 py-4 text-center">
                     <button
                       onClick={() => toggleSort('reply_rate')}
@@ -352,7 +415,7 @@ export default function CRMDashboard() {
                       <ArrowUpDown className="w-4 h-4" />
                     </button>
                   </th>
-                  <th className="px-6 py-4 text-center font-semibold text-sm text-foreground">Last 30d</th>
+                  <th className="px-6 py-4 text-center font-semibold text-sm text-foreground">Last 30 Days</th>
                   <th className="px-6 py-4 text-center font-semibold text-sm text-foreground">Last Active</th>
                   <th className="px-6 py-4 text-center font-semibold text-sm text-foreground">Actions</th>
                 </tr>
@@ -374,21 +437,8 @@ export default function CRMDashboard() {
                     <td className="px-6 py-4 text-center font-medium text-foreground">
                       {agent.total_sent}
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex flex-col items-center">
-                        <span className="font-medium text-foreground">{agent.total_opened}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {agent.open_rate?.toFixed(1) || '0.0'}%
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex flex-col items-center">
-                        <span className="font-medium text-foreground">{agent.total_replied}</span>
-                        <span className="text-xs text-accent font-medium">
-                          {agent.reply_rate?.toFixed(1) || '0.0'}%
-                        </span>
-                      </div>
+                    <td className="px-6 py-4 text-center font-medium text-foreground">
+                      {agent.total_replied}
                     </td>
                     <td className="px-6 py-4 text-center">
                       <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-accent/20 text-accent border border-accent/30">

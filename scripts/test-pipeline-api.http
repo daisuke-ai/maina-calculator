@@ -1,0 +1,327 @@
+# =====================================================
+# Pipeline API Test Script
+# Use with REST Client extension in VS Code
+# or import into Postman/Insomnia
+# =====================================================
+
+@baseUrl = http://localhost:3000
+@apiBase = {{baseUrl}}/api/crm/pipeline
+
+# =====================================================
+# 1. CREATE A NEW DEAL
+# =====================================================
+
+### Create Deal - Ammar (Agent ID 1)
+POST {{apiBase}}/deals
+Content-Type: application/json
+
+{
+  "property_address": "456 Market St, Indianapolis, IN 46204",
+  "opportunity_value": 275000,
+  "agent_id": 1,
+  "agent_name": "Ammar",
+  "agent_email": "ammar@miana.com.co",
+  "offer_price": 265000,
+  "down_payment": 0,
+  "monthly_payment": 1650,
+  "balloon_period": 20,
+  "estimated_rehab_cost": 15000,
+  "expected_closing_date": "2025-04-15",
+  "realtor_name": "Jane Smith",
+  "realtor_email": "jane@realty.com",
+  "realtor_phone": "(555) 123-4567",
+  "priority": "high",
+  "notes": "Motivated seller, good condition",
+  "created_by": "api_test"
+}
+
+### Create Deal - Ada (Agent ID 2)
+POST {{apiBase}}/deals
+Content-Type: application/json
+
+{
+  "property_address": "789 Oak Avenue, Fort Wayne, IN 46802",
+  "opportunity_value": 195000,
+  "agent_id": 2,
+  "agent_name": "Ada",
+  "agent_email": "ada@miana.com.co",
+  "offer_price": 190000,
+  "down_payment": 0,
+  "monthly_payment": 1250,
+  "expected_closing_date": "2025-03-30",
+  "priority": "medium",
+  "created_by": "api_test"
+}
+
+### Create Deal - Minimal Required Fields
+POST {{apiBase}}/deals
+Content-Type: application/json
+
+{
+  "property_address": "321 Elm St, South Bend, IN 46601",
+  "opportunity_value": 150000,
+  "agent_id": 3,
+  "agent_name": "Elif",
+  "agent_email": "elif@miana.com.co"
+}
+
+# =====================================================
+# 2. LIST DEALS
+# =====================================================
+
+### Get All Active Deals
+GET {{apiBase}}/deals?status=active
+
+### Get Deals for Specific Agent
+GET {{apiBase}}/deals?agent_id=1
+
+### Get Deals by Stage
+GET {{apiBase}}/deals?stage=loi_accepted
+
+### Get Deals with Pagination
+GET {{apiBase}}/deals?limit=10&offset=0
+
+### Get All Deals (including won/lost)
+GET {{apiBase}}/deals?status=all
+
+# =====================================================
+# 3. GET SINGLE DEAL
+# =====================================================
+
+### Get Deal by ID (replace with actual ID from create response)
+# @dealId = paste-deal-id-here
+GET {{apiBase}}/deals/{{dealId}}
+
+# =====================================================
+# 4. UPDATE DEAL
+# =====================================================
+
+### Update Deal - Change opportunity value and add notes
+PATCH {{apiBase}}/deals/{{dealId}}
+Content-Type: application/json
+
+{
+  "opportunity_value": 280000,
+  "notes": "Seller agreed to include appliances",
+  "priority": "urgent",
+  "updated_by": "api_test"
+}
+
+### Update Deal - Add seller information
+PATCH {{apiBase}}/deals/{{dealId}}
+Content-Type: application/json
+
+{
+  "seller_name": "John Doe",
+  "seller_email": "john@example.com",
+  "seller_phone": "(555) 987-6543"
+}
+
+# =====================================================
+# 5. MOVE DEAL THROUGH STAGES
+# =====================================================
+
+### Move to Due Diligence
+POST {{apiBase}}/deals/{{dealId}}/move
+Content-Type: application/json
+
+{
+  "new_stage": "due_diligence",
+  "changed_by": "api_test",
+  "notes": "Inspection scheduled for next week"
+}
+
+### Move to Contract
+POST {{apiBase}}/deals/{{dealId}}/move
+Content-Type: application/json
+
+{
+  "new_stage": "contract",
+  "changed_by": "api_test",
+  "notes": "Contract signed by both parties"
+}
+
+### Move to Closing
+POST {{apiBase}}/deals/{{dealId}}/move
+Content-Type: application/json
+
+{
+  "new_stage": "closing",
+  "changed_by": "api_test",
+  "notes": "Closing scheduled for next week"
+}
+
+### Move to Won
+POST {{apiBase}}/deals/{{dealId}}/move
+Content-Type: application/json
+
+{
+  "new_stage": "won",
+  "changed_by": "api_test",
+  "notes": "Deal closed successfully!"
+}
+
+### Try Invalid Transition (should fail)
+POST {{apiBase}}/deals/{{dealId}}/move
+Content-Type: application/json
+
+{
+  "new_stage": "contract",
+  "changed_by": "api_test",
+  "notes": "This should fail - can't go from won back to contract"
+}
+
+# =====================================================
+# 6. ACTIVITIES
+# =====================================================
+
+### Create Activity - Note
+POST {{apiBase}}/deals/{{dealId}}/activities
+Content-Type: application/json
+
+{
+  "activity_type": "note",
+  "title": "Initial property walkthrough",
+  "description": "Property is in good condition. Minor cosmetic repairs needed.",
+  "outcome": "positive",
+  "created_by": "api_test"
+}
+
+### Create Activity - Call
+POST {{apiBase}}/deals/{{dealId}}/activities
+Content-Type: application/json
+
+{
+  "activity_type": "call",
+  "title": "Called seller about closing date",
+  "description": "Discussed closing timeline. Seller is flexible.",
+  "contact_name": "John Doe",
+  "contact_phone": "(555) 987-6543",
+  "outcome": "positive",
+  "next_action": "Schedule final walkthrough",
+  "next_action_due_date": "2025-04-01",
+  "created_by": "api_test"
+}
+
+### Create Activity - Inspection
+POST {{apiBase}}/deals/{{dealId}}/activities
+Content-Type: application/json
+
+{
+  "activity_type": "inspection",
+  "title": "Home inspection completed",
+  "description": "Inspector found minor issues with HVAC. Est repair cost $3,500.",
+  "contact_name": "Mike Johnson (Inspector)",
+  "contact_email": "mike@inspections.com",
+  "outcome": "neutral",
+  "created_by": "api_test"
+}
+
+### Get All Activities for Deal
+GET {{apiBase}}/deals/{{dealId}}/activities
+
+# =====================================================
+# 7. ANALYTICS - SUMMARY
+# =====================================================
+
+### Get Pipeline Summary (default 30 days)
+GET {{apiBase}}/analytics/summary
+
+### Get Pipeline Summary (last 7 days)
+GET {{apiBase}}/analytics/summary?days_back=7
+
+### Get Pipeline Summary (last 90 days)
+GET {{apiBase}}/analytics/summary?days_back=90
+
+# =====================================================
+# 8. ANALYTICS - AGENTS
+# =====================================================
+
+### Get All Agent Performance
+GET {{apiBase}}/analytics/agents
+
+### Get Specific Agent Performance
+GET {{apiBase}}/analytics/agents?agent_id=1
+
+### Get Agents Sorted by Won Value
+GET {{apiBase}}/analytics/agents?sort_by=total_won_value&sort_order=desc
+
+### Get Agents Sorted by Conversion Rate
+GET {{apiBase}}/analytics/agents?sort_by=conversion_rate&sort_order=desc
+
+# =====================================================
+# 9. ANALYTICS - FORECAST
+# =====================================================
+
+### Get 6-Month Forecast (default)
+GET {{apiBase}}/analytics/forecast
+
+### Get 3-Month Forecast
+GET {{apiBase}}/analytics/forecast?months_ahead=3
+
+### Get 12-Month Forecast
+GET {{apiBase}}/analytics/forecast?months_ahead=12
+
+# =====================================================
+# 10. DELETE DEAL
+# =====================================================
+
+### Delete Deal (WARNING: This will delete the deal and all related data)
+# DELETE {{apiBase}}/deals/{{dealId}}
+
+# =====================================================
+# ERROR CASES (Should Return Errors)
+# =====================================================
+
+### Create Deal - Missing Required Fields
+POST {{apiBase}}/deals
+Content-Type: application/json
+
+{
+  "property_address": "123 Test St"
+}
+
+### Create Deal - Invalid opportunity_value (must be > 0)
+POST {{apiBase}}/deals
+Content-Type: application/json
+
+{
+  "property_address": "123 Test St",
+  "opportunity_value": -100,
+  "agent_id": 1,
+  "agent_name": "Test",
+  "agent_email": "test@test.com"
+}
+
+### Create Deal - Invalid agent_id (must be 1-24)
+POST {{apiBase}}/deals
+Content-Type: application/json
+
+{
+  "property_address": "123 Test St",
+  "opportunity_value": 100000,
+  "agent_id": 99,
+  "agent_name": "Test",
+  "agent_email": "test@test.com"
+}
+
+### Get Non-existent Deal
+GET {{apiBase}}/deals/00000000-0000-0000-0000-000000000000
+
+### Move to Invalid Stage
+POST {{apiBase}}/deals/{{dealId}}/move
+Content-Type: application/json
+
+{
+  "new_stage": "invalid_stage",
+  "changed_by": "api_test"
+}
+
+### Create Activity - Invalid Type
+POST {{apiBase}}/deals/{{dealId}}/activities
+Content-Type: application/json
+
+{
+  "activity_type": "invalid_type",
+  "title": "Test Activity"
+}

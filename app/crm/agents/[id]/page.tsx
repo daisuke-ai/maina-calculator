@@ -17,7 +17,10 @@ import {
   Calendar,
   CheckCircle2,
   XCircle,
-  Circle
+  Circle,
+  LayoutDashboard,
+  DollarSign,
+  Target
 } from 'lucide-react'
 
 interface AgentData {
@@ -71,16 +74,28 @@ interface AgentData {
   }>
 }
 
+interface AgentPipelinePerformance {
+  active_deals: number
+  total_won: number
+  total_lost: number
+  conversion_rate: number
+  total_won_value: number
+  active_pipeline_value: number
+  avg_days_to_close: number
+}
+
 export default function AgentDetailPage() {
   const params = useParams()
   const agentId = params.id as string
 
   const [agent, setAgent] = useState<AgentData | null>(null)
+  const [pipelinePerf, setPipelinePerf] = useState<AgentPipelinePerformance | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchAgentData()
+    fetchPipelinePerformance()
   }, [agentId])
 
   const fetchAgentData = async () => {
@@ -98,6 +113,19 @@ export default function AgentDetailPage() {
       setError(err.message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchPipelinePerformance = async () => {
+    try {
+      const response = await fetch(`/api/crm/pipeline/analytics/agents?agent_id=${agentId}`)
+      const result = await response.json()
+
+      if (response.ok && result.agents && result.agents.length > 0) {
+        setPipelinePerf(result.agents[0])
+      }
+    } catch (err: any) {
+      console.error('Failed to fetch pipeline performance:', err)
     }
   }
 
@@ -278,6 +306,74 @@ export default function AgentDetailPage() {
             </Card>
           </div>
         </div>
+
+        {/* Pipeline Performance */}
+        {pipelinePerf && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl md:text-3xl font-extrabold text-foreground">Pipeline Performance</h2>
+              <Link href="/crm/pipeline">
+                <button className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl font-medium transition-all shadow-lg">
+                  <LayoutDashboard className="w-4 h-4" />
+                  View Pipeline
+                </button>
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Card className="p-6 bg-gradient-to-br from-green-500/10 to-green-600/5 border-2 border-green-500/30 shadow-xl">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm text-muted-foreground">Active Deals</p>
+                  <LayoutDashboard className="w-5 h-5 text-green-500 opacity-50" />
+                </div>
+                <p className="text-3xl font-bold text-foreground">{pipelinePerf.active_deals}</p>
+                <p className="text-xs text-green-500 font-medium mt-1">
+                  {new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: 'USD',
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0,
+                  }).format(pipelinePerf.active_pipeline_value)} value
+                </p>
+              </Card>
+
+              <Card className="p-6 bg-gradient-to-br from-green-500/10 to-green-600/5 border-2 border-green-500/30 shadow-xl">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm text-muted-foreground">Deals Won</p>
+                  <CheckCircle2 className="w-5 h-5 text-green-500 opacity-50" />
+                </div>
+                <p className="text-3xl font-bold text-foreground">{pipelinePerf.total_won}</p>
+                <p className="text-xs text-green-500 font-medium mt-1">
+                  {new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: 'USD',
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0,
+                  }).format(pipelinePerf.total_won_value)} total
+                </p>
+              </Card>
+
+              <Card className="p-6 bg-gradient-to-br from-green-500/10 to-green-600/5 border-2 border-green-500/30 shadow-xl">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm text-muted-foreground">Conversion Rate</p>
+                  <Target className="w-5 h-5 text-green-500 opacity-50" />
+                </div>
+                <p className="text-3xl font-bold text-green-500">{pipelinePerf.conversion_rate}%</p>
+                <p className="text-xs text-muted-foreground mt-1">{pipelinePerf.total_lost} lost</p>
+              </Card>
+
+              <Card className="p-6 bg-gradient-to-br from-green-500/10 to-green-600/5 border-2 border-green-500/30 shadow-xl">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm text-muted-foreground">Avg Days to Close</p>
+                  <Clock className="w-5 h-5 text-green-500 opacity-50" />
+                </div>
+                <p className="text-3xl font-bold text-foreground">
+                  {pipelinePerf.avg_days_to_close || 'N/A'}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">days average</p>
+              </Card>
+            </div>
+          </div>
+        )}
 
         {/* Email History */}
         <div>

@@ -505,6 +505,306 @@ Update loi_emails:
 
 ---
 
+## Sales Pipeline Tables
+
+### 1. `pipeline_deals`
+**Purpose:** Tracks properties through the sales pipeline from LOI acceptance to closing.
+
+**Schema:**
+```sql
+CREATE TABLE pipeline_deals (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  -- Property Information
+  property_address TEXT NOT NULL,
+  property_city TEXT,
+  property_state TEXT,
+  property_zip TEXT,
+
+  -- Financial Information
+  opportunity_value NUMERIC(12, 2) NOT NULL, -- Primary tracking value
+  offer_price NUMERIC(12, 2),
+  down_payment NUMERIC(12, 2),
+  monthly_payment NUMERIC(12, 2),
+  balloon_period INTEGER,
+  estimated_rehab_cost NUMERIC(12, 2),
+  total_deal_value NUMERIC(12, 2),
+
+  -- Agent Attribution
+  agent_id INTEGER NOT NULL,
+  agent_name TEXT NOT NULL,
+  agent_email TEXT NOT NULL,
+
+  -- Pipeline Stage & Status
+  stage TEXT NOT NULL DEFAULT 'loi_accepted',
+  -- Stages: 'loi_accepted', 'due_diligence', 'contract', 'closing', 'won', 'lost'
+  status TEXT NOT NULL DEFAULT 'active',
+  -- Status: 'active', 'won', 'lost', 'on_hold', 'cancelled'
+
+  -- Timeline
+  loi_accepted_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  due_diligence_date DATE,
+  contract_date DATE,
+  closing_date DATE,
+  expected_closing_date DATE,
+  actual_closing_date DATE,
+
+  -- Metadata
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**Key Fields:**
+- `opportunity_value`: Required field for pipeline value tracking and forecasting
+- `stage`: Current pipeline stage (5 active stages + won/lost)
+- `status`: Overall deal status
+- `probability_to_close`: Auto-updated based on stage (50-95%)
+
+---
+
+### 2. `pipeline_stage_history`
+**Purpose:** Audit trail of all stage transitions for pipeline deals.
+
+**Schema:**
+```sql
+CREATE TABLE pipeline_stage_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  deal_id UUID REFERENCES pipeline_deals(id) ON DELETE CASCADE,
+
+  from_stage TEXT,
+  to_stage TEXT NOT NULL,
+  transitioned_at TIMESTAMPTZ DEFAULT NOW(),
+  days_in_previous_stage INTEGER,
+  changed_by TEXT,
+  notes TEXT,
+
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**Relationships:**
+- `deal_id` → `pipeline_deals.id` (CASCADE DELETE)
+
+---
+
+### 3. `pipeline_activities`
+**Purpose:** Log of all activities and interactions related to pipeline deals.
+
+**Schema:**
+```sql
+CREATE TABLE pipeline_activities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  deal_id UUID REFERENCES pipeline_deals(id) ON DELETE CASCADE,
+
+  activity_type TEXT NOT NULL,
+  -- Types: 'note', 'call', 'email', 'meeting', 'inspection', 'offer', etc.
+  title TEXT NOT NULL,
+  description TEXT,
+
+  contact_name TEXT,
+  contact_email TEXT,
+  contact_phone TEXT,
+
+  outcome TEXT, -- 'positive', 'neutral', 'negative'
+  next_action TEXT,
+  next_action_due_date DATE,
+
+  created_by TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**Relationships:**
+- `deal_id` → `pipeline_deals.id` (CASCADE DELETE)
+
+---
+
+## Pipeline Analytics Views
+
+### 1. `pipeline_summary_view`
+**Purpose:** Overall pipeline health metrics and KPIs.
+
+**Returns:**
+```sql
+total_active_deals BIGINT
+total_won_deals BIGINT
+total_lost_deals BIGINT
+active_pipeline_value NUMERIC       -- Sum of opportunity_value for active deals
+won_deal_value NUMERIC
+lost_deal_value NUMERIC
+avg_probability NUMERIC
+weighted_pipeline_value NUMERIC     -- opportunity_value * probability / 100
+overall_conversion_rate NUMERIC     -- Won / (Won + Lost) * 100
+avg_days_to_close NUMERIC          -- Average time from LOI to Won
+```
+
+**Usage:** Main dashboard KPIs
+
+---
+
+### 2. `pipeline_by_stage_view`
+**Purpose:** Pipeline breakdown by stage with metrics.
+
+**Returns:**
+```sql
+stage TEXT
+deal_count BIGINT
+total_value NUMERIC
+avg_deal_value NUMERIC
+avg_probability NUMERIC
+weighted_value NUMERIC
+avg_days_in_stage NUMERIC
+```
+
+**Usage:** Kanban board metrics, stage analysis
+
+---
+
+### 3. `agent_pipeline_performance_view`
+**Purpose:** Agent performance metrics for pipeline deals.
+
+**Returns:**
+```sql
+agent_id INTEGER
+agent_name TEXT
+active_deals BIGINT
+won_deals BIGINT
+lost_deals BIGINT
+total_deals BIGINT
+active_pipeline_value NUMERIC
+total_won_value NUMERIC
+total_lost_value NUMERIC
+conversion_rate NUMERIC
+avg_won_deal_size NUMERIC
+avg_active_deal_size NUMERIC
+avg_days_to_close NUMERIC
+```
+
+**Usage:** Agent leaderboards, performance tracking
+
+---
+
+### 4. `pipeline_forecast_view`
+**Purpose:** Forecasted closings by month with probability weighting.
+
+**Returns:**
+```sql
+closing_month DATE
+expected_closings BIGINT
+expected_value NUMERIC
+weighted_expected_value NUMERIC
+avg_probability NUMERIC
+loi_accepted_count BIGINT
+due_diligence_count BIGINT
+contract_count BIGINT
+closing_count BIGINT
+```
+
+**Usage:** Revenue forecasting, capacity planning
+
+---
+
+## Pipeline Database Functions
+
+### 1. `create_pipeline_deal()`
+**Purpose:** Create a new pipeline deal with automatic stage history tracking.
+
+**Parameters:**
+- `p_property_address` TEXT (required)
+- `p_opportunity_value` NUMERIC (required)
+- `p_agent_id` INTEGER (required)
+- `p_agent_name` TEXT (required)
+- `p_agent_email` TEXT (required)
+- `p_offer_price` NUMERIC (optional)
+- `p_down_payment` NUMERIC (optional)
+- `p_monthly_payment` NUMERIC (optional)
+- `p_loi_tracking_id` TEXT (optional)
+- `p_expected_closing_date` DATE (optional)
+- `p_created_by` TEXT (optional)
+
+**Returns:** UUID (deal_id)
+
+**Usage:**
+```sql
+SELECT create_pipeline_deal(
+  '123 Main St, City, ST',
+  250000,  -- opportunity_value
+  1,       -- agent_id
+  'Ammar',
+  'ammar@miana.com.co',
+  240000,  -- offer_price (optional)
+  0,       -- down_payment
+  1500,    -- monthly_payment
+  NULL,    -- loi_tracking_id
+  '2025-03-15'::DATE,
+  'user_email'
+);
+```
+
+---
+
+### 2. `update_deal_stage()`
+**Purpose:** Move deal to new stage with validation and automatic history tracking.
+
+**Parameters:**
+- `p_deal_id` UUID (required)
+- `p_new_stage` TEXT (required)
+- `p_changed_by` TEXT (optional)
+- `p_notes` TEXT (optional)
+
+**Returns:** BOOLEAN (true if stage changed, false if no change)
+
+**Stage Validation:**
+- LOI Accepted → Due Diligence or Lost
+- Due Diligence → Contract or Lost
+- Contract → Closing or Lost
+- Closing → Won or Lost
+
+**Automatic Updates:**
+- Updates `probability_to_close` based on new stage
+- Sets stage date fields
+- Records transition in `pipeline_stage_history`
+- Calculates `days_in_previous_stage`
+
+**Usage:**
+```sql
+SELECT update_deal_stage(
+  'deal-uuid-here',
+  'due_diligence',
+  'user_email',
+  'Inspection scheduled for next week'
+);
+```
+
+---
+
+### 3. `get_pipeline_metrics_by_range(days_back)`
+**Purpose:** Get pipeline metrics for a specific time period.
+
+**Parameters:**
+- `days_back` INTEGER (default: 30)
+
+**Returns:**
+```sql
+total_created BIGINT
+total_won BIGINT
+total_lost BIGINT
+won_value NUMERIC
+lost_value NUMERIC
+conversion_rate NUMERIC
+avg_days_to_close NUMERIC
+```
+
+**Usage:**
+```sql
+SELECT * FROM get_pipeline_metrics_by_range(7);   -- Last week
+SELECT * FROM get_pipeline_metrics_by_range(30);  -- Last month
+SELECT * FROM get_pipeline_metrics_by_range(90);  -- Last quarter
+```
+
+---
+
 ## Migration History
 
 ### 1. `20250113_loi_email_tracking.sql`
@@ -562,6 +862,32 @@ Update loi_emails:
 **Features:**
 - Time-range filtering for all analytics
 - Support for week, month, quarter, year, and custom ranges
+
+---
+
+### 5. `20250117_create_pipeline_tables.sql`
+**Date:** January 17, 2025
+
+**Created:**
+- ✓ `pipeline_deals` table (main pipeline tracking)
+- ✓ `pipeline_stage_history` table (stage transition audit)
+- ✓ `pipeline_activities` table (activity logging)
+- ✓ `pipeline_summary_view` (overall KPIs)
+- ✓ `pipeline_by_stage_view` (stage breakdown)
+- ✓ `agent_pipeline_performance_view` (agent metrics)
+- ✓ `pipeline_forecast_view` (monthly forecast)
+- ✓ `create_pipeline_deal()` function
+- ✓ `update_deal_stage()` function
+- ✓ `get_pipeline_metrics_by_range()` function
+- ✓ 13 performance indexes
+
+**Features:**
+- Sales pipeline tracking from LOI acceptance to closing
+- 5 pipeline stages with validation
+- Opportunity value tracking for forecasting
+- Agent attribution and performance metrics
+- Stage transition history
+- Activity logging
 
 ---
 
@@ -711,6 +1037,7 @@ Currently, there is **no automatic data retention policy**. All data is kept ind
 | 2025-01-14 | 1.1 | Added email replies table |
 | 2025-01-15 | 2.0 | Added comprehensive analytics views |
 | 2025-01-16 | 2.1 | Added time-range analytics functions |
+| 2025-01-17 | 3.0 | Added sales pipeline tables and analytics |
 
 ---
 
