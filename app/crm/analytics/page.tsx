@@ -200,61 +200,6 @@ export default function AnalyticsPage() {
           </div>
         </Card>
 
-        {/* Offer Type Performance */}
-        <div>
-          <h2 className="text-2xl md:text-3xl font-extrabold text-foreground mb-6">Performance by Offer Type</h2>
-          <div className="grid grid-cols-1 gap-4">
-            {analytics.offerTypes.map((offer, index) => (
-              <Card key={index} className="p-6 bg-card border-2 border-border shadow-xl">
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold text-foreground mb-2">{offer.offer_type}</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1">Sent</p>
-                        <p className="text-lg font-bold text-foreground">{offer.total_sent}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1">Opened</p>
-                        <p className="text-lg font-bold text-foreground">{offer.total_opened}</p>
-                        <p className="text-xs text-muted-foreground">{offer.open_rate?.toFixed(1) || '0.0'}%</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1">Replied</p>
-                        <p className="text-lg font-bold text-foreground">{offer.total_replied}</p>
-                        <p className="text-xs text-accent font-medium">{offer.reply_rate?.toFixed(1) || '0.0'}%</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1">Avg Price</p>
-                        <p className="text-lg font-bold text-foreground">{formatCurrency(offer.avg_offer_price)}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="lg:border-l lg:border-border lg:pl-6 flex flex-col gap-2">
-                    <div className="flex items-center justify-between gap-8">
-                      <span className="text-sm text-muted-foreground">Avg Down Payment:</span>
-                      <span className="text-sm font-medium text-foreground">{formatCurrency(offer.avg_down_payment)}</span>
-                    </div>
-                    <div className="flex items-center justify-between gap-8">
-                      <span className="text-sm text-muted-foreground">Avg Monthly:</span>
-                      <span className="text-sm font-medium text-foreground">{formatCurrency(offer.avg_monthly_payment)}</span>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-
-          {analytics.offerTypes.length === 0 && (
-            <Card className="p-12 bg-card border-2 border-border shadow-xl">
-              <div className="text-center">
-                <TrendingUp className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-20" />
-                <p className="text-lg text-muted-foreground">No offer type data available</p>
-              </div>
-            </Card>
-          )}
-        </div>
-
         {/* Top Performing Agents */}
         <div>
           <h2 className="text-2xl md:text-3xl font-extrabold text-foreground mb-6">Top Performing Agents</h2>
