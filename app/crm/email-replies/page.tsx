@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase';
 import ReplyEmailModal from '@/components/loi/ReplyEmailModal';
 import { Mail, Clock, User, MapPin, DollarSign } from 'lucide-react';
 
@@ -37,14 +37,17 @@ export default function EmailRepliesPage() {
   const [selectedReply, setSelectedReply] = useState<EmailReply | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const supabase = createClient();
-
   useEffect(() => {
     fetchEmailReplies();
   }, []);
 
   const fetchEmailReplies = async () => {
     try {
+      if (!supabase) {
+        console.error('Supabase client not initialized');
+        return;
+      }
+
       // Fetch all email replies
       const { data: repliesData, error: repliesError } = await supabase
         .from('email_replies')
