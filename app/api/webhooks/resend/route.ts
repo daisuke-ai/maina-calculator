@@ -114,8 +114,9 @@ export async function POST(request: NextRequest) {
 
       case 'email.received':
         // Email reply received - this is the most important event for CRM
+        console.log(`[Email Reply Received] Full payload:`, JSON.stringify(eventData, null, 2));
         await handleEmailReply(eventData);
-        console.log(`[Email Reply Received]`);
+        console.log(`[Email Reply Received] Processed`);
         break;
 
       default:

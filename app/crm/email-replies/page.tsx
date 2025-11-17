@@ -222,9 +222,13 @@ export default function EmailRepliesPage() {
                         </div>
 
                         {/* Message Preview */}
-                        {reply.text_content && (
+                        {reply.text_content ? (
                           <p className="text-sm text-gray-600 line-clamp-2">
                             {reply.text_content}
+                          </p>
+                        ) : (
+                          <p className="text-sm text-gray-400 italic">
+                            [Email content not available - click Reply to view in modal]
                           </p>
                         )}
                       </div>
