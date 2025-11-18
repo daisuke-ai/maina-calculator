@@ -81,6 +81,9 @@ export default function CRMDashboard() {
   const [timeRange, setTimeRange] = useState<TimeRange>('month')
   const [syncing, setSyncing] = useState(false)
   const [syncMessage, setSyncMessage] = useState<{ type: 'success' | 'error' | null; text: string }>({ type: null, text: '' })
+  const [syncAccuracyMode, setSyncAccuracyMode] = useState(true)
+  const [showAccuracyDialog, setShowAccuracyDialog] = useState(false)
+  const [syncStats, setSyncStats] = useState<{ total: number; synced: number; accuracy: number; filtered: number } | null>(null)
 
   useEffect(() => {
     fetchAgents()
@@ -214,7 +217,7 @@ export default function CRMDashboard() {
     return date.toLocaleDateString()
   }
 
-  const syncCallData = async () => {
+  const syncCallData = async (useAccuracyMode: boolean = true) => {
     setSyncing(true)
     setSyncMessage({ type: null, text: '' })
 
@@ -233,7 +236,8 @@ export default function CRMDashboard() {
         body: JSON.stringify({
           dateFrom: dateFrom.toISOString(),
           dateTo: dateTo.toISOString(),
-          perPage: 500
+          perPage: 500,
+          onlyAccurate: useAccuracyMode
         })
       })
 
@@ -243,9 +247,26 @@ export default function CRMDashboard() {
         throw new Error(result.error || 'Failed to sync call data')
       }
 
+      // Store stats and show accuracy dialog if low accuracy
+      if (result.accuracy && result.accuracy < 50 && !useAccuracyMode) {
+        setSyncStats({
+          total: result.total,
+          synced: result.synced,
+          accuracy: result.accuracy,
+          filtered: result.filtered || 0
+        })
+        setShowAccuracyDialog(true)
+        setSyncing(false)
+        return
+      }
+
+      const filteredText = useAccuracyMode && result.filtered > 0
+        ? ` (filtered ${result.filtered} unmapped calls)`
+        : ''
+
       setSyncMessage({
         type: 'success',
-        text: `Successfully synced ${result.synced || 0} call records`
+        text: `Successfully synced ${result.synced || 0} call records at ${result.accuracy || 100}% accuracy${filteredText}`
       })
 
       // Refresh agent data to show new call metrics
@@ -269,6 +290,66 @@ export default function CRMDashboard() {
       setSyncing(false)
     }
   }
+
+  // Accuracy dialog modal
+  const accuracyDialog = showAccuracyDialog && syncStats && (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <Card className="max-w-md w-full bg-card border-2 border-border shadow-2xl">
+        <div className="p-6 space-y-4">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-6 h-6 text-yellow-500" />
+            <h2 className="text-xl font-bold text-foreground">Low Accuracy Warning</h2>
+          </div>
+
+          <div className="bg-yellow-50 dark:bg-yellow-950/30 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800">
+            <p className="text-sm text-yellow-900 dark:text-yellow-200">
+              Only <span className="font-bold">{syncStats.accuracy.toFixed(1)}%</span> of calls could be mapped to agents.
+            </p>
+            <ul className="mt-2 text-sm text-yellow-900 dark:text-yellow-200 space-y-1">
+              <li>• Total calls found: <span className="font-semibold">{syncStats.total}</span></li>
+              <li>• Mapped calls: <span className="font-semibold">{syncStats.synced}</span></li>
+              <li>• Unmapped calls: <span className="font-semibold">{syncStats.filtered}</span></li>
+            </ul>
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">How would you like to proceed?</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowAccuracyDialog(false)
+                  setSyncStats(null)
+                  syncCallData(true) // Sync only accurate calls
+                }}
+                className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg font-medium transition-all"
+              >
+                Sync Only Accurate
+              </button>
+              <button
+                onClick={() => {
+                  setShowAccuracyDialog(false)
+                  setSyncStats(null)
+                  syncCallData(false) // Sync all calls including unmapped
+                }}
+                className="flex-1 px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg font-medium transition-all"
+              >
+                Sync All
+              </button>
+            </div>
+            <button
+              onClick={() => {
+                setShowAccuracyDialog(false)
+                setSyncStats(null)
+              }}
+              className="w-full px-4 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-lg font-medium transition-all"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </Card>
+    </div>
+  )
 
   if (loading) {
     return (
@@ -295,6 +376,7 @@ export default function CRMDashboard() {
 
   return (
     <main className="min-h-screen py-12 px-4">
+      {accuracyDialog}
       <div className="container mx-auto max-w-7xl space-y-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

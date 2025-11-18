@@ -201,14 +201,31 @@ export async function POST(request: NextRequest) {
     // Transform and prepare for insertion
     const transformedRecords = records.map(transformCallRecord);
 
-    // Count how many have extensions
+    // Count accuracy metrics
     const withExtension = transformedRecords.filter(r => r.extension_number).length;
-    console.log(`[Sync Calls] ${withExtension}/${transformedRecords.length} records have extension numbers`);
+    const withAgentId = transformedRecords.filter(r => r.agent_id !== null).length;
+    const accuracyPercent = transformedRecords.length > 0
+      ? ((withAgentId / transformedRecords.length) * 100).toFixed(1)
+      : '0.0';
+
+    console.log(`[Sync Calls] Accuracy: ${withAgentId}/${transformedRecords.length} records mapped (${accuracyPercent}%)`);
+    console.log(`[Sync Calls] With extensions: ${withExtension}/${transformedRecords.length}`);
+
+    // Filter to only accurate (mapped) calls if requested
+    const onlyAccurate = body.onlyAccurate === true;
+    const recordsToSync = onlyAccurate
+      ? transformedRecords.filter(r => r.agent_id !== null)
+      : transformedRecords;
+
+    if (onlyAccurate && recordsToSync.length < transformedRecords.length) {
+      const filtered = transformedRecords.length - recordsToSync.length;
+      console.log(`[Sync Calls] Filtered out ${filtered} unmapped calls (onlyAccurate mode)`);
+    }
 
     // Upsert records into Supabase
     const { data, error } = await supabase
       .from('call_logs')
-      .upsert(transformedRecords, {
+      .upsert(recordsToSync, {
         onConflict: 'id',
         ignoreDuplicates: false,
       });
@@ -225,14 +242,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`[Sync Calls] Successfully synced ${transformedRecords.length} records`);
+    console.log(`[Sync Calls] Successfully synced ${recordsToSync.length} records`);
 
     return NextResponse.json({
       success: true,
-      message: `Successfully synced ${transformedRecords.length} call records`,
-      synced: transformedRecords.length,
+      message: `Successfully synced ${recordsToSync.length} call records (${accuracyPercent}% accuracy)`,
+      synced: recordsToSync.length,
       total: transformedRecords.length,
       withExtensions: withExtension,
+      withAgentId: withAgentId,
+      accuracy: parseFloat(accuracyPercent),
+      filtered: onlyAccurate ? transformedRecords.length - recordsToSync.length : 0,
       paging: callLogResponse.paging,
     });
   } catch (error: any) {

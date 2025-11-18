@@ -25,7 +25,8 @@ export async function GET(request: NextRequest) {
 
     console.log(`[Cron Sync] Date range: ${dateFrom.toISOString()} to ${dateTo.toISOString()}`);
 
-    // Call the sync API internally
+    // Call the sync API internally with accuracy filtering
+    // Only sync calls that have valid agent mappings to maintain data quality
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
     const response = await fetch(`${baseUrl}/api/ringcentral/sync-calls`, {
       method: 'POST',
@@ -33,7 +34,8 @@ export async function GET(request: NextRequest) {
       body: JSON.stringify({
         dateFrom: dateFrom.toISOString(),
         dateTo: dateTo.toISOString(),
-        perPage: 500
+        perPage: 500,
+        onlyAccurate: true
       })
     });
 
@@ -41,7 +43,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `Synced ${result.synced || 0} call records`,
+      message: `Synced ${result.synced || 0} call records at ${result.accuracy || 100}% accuracy (filtered ${result.filtered || 0} unmapped)`,
+      synced: result.synced,
+      accuracy: result.accuracy,
+      filtered: result.filtered,
       timestamp: new Date().toISOString()
     });
   } catch (error) {
