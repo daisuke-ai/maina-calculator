@@ -17,10 +17,13 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Calculate date range for last 2 days (since we only run once daily on Hobby plan)
+    // Calculate date range for last 2 days (rolling window)
+    // This ensures we catch any missed calls while not accumulating stale data
     const dateTo = new Date();
     const dateFrom = new Date();
     dateFrom.setDate(dateFrom.getDate() - 2);
+
+    console.log(`[Cron Sync] Date range: ${dateFrom.toISOString()} to ${dateTo.toISOString()}`);
 
     // Call the sync API internally
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
