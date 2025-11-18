@@ -219,10 +219,11 @@ export default function CRMDashboard() {
     setSyncMessage({ type: null, text: '' })
 
     try {
-      // Calculate date range for last 30 days
+      // Calculate date range for last 2 days (rolling window)
+      // Matches cron strategy to prevent data accumulation
       const dateTo = new Date()
       const dateFrom = new Date()
-      dateFrom.setDate(dateFrom.getDate() - 30)
+      dateFrom.setDate(dateFrom.getDate() - 2)
 
       const response = await fetch('/api/ringcentral/sync-calls', {
         method: 'POST',
