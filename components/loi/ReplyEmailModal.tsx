@@ -10,8 +10,8 @@ interface ReplyEmailModalProps {
     id: string;
     from_email: string;
     subject: string;
-    text_content?: string;
-    html_content?: string;
+    text_content?: string | null;
+    html_content?: string | null;
     received_at: string;
     loi_tracking_id: string;
     agent_name: string;

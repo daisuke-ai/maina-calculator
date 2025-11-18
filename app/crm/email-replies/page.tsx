@@ -15,9 +15,9 @@ interface EmailReply {
   from_email: string;
   to_email: string;
   subject: string;
-  text_content: string | null;
-  html_content: string | null;
-  message_id: string | null;
+  text_content?: string | null;
+  html_content?: string | null;
+  message_id?: string | null;
   received_at: string;
   created_at: string;
 }
@@ -61,7 +61,7 @@ export default function EmailRepliesPage() {
       setReplies(repliesData || []);
 
       // Fetch corresponding LOI details
-      const trackingIds = [...new Set(repliesData?.map((r) => r.loi_tracking_id))];
+      const trackingIds = [...new Set(repliesData?.map((r: EmailReply) => r.loi_tracking_id))];
 
       if (trackingIds.length > 0) {
         const { data: loiData, error: loiError } = await supabase
@@ -73,7 +73,7 @@ export default function EmailRepliesPage() {
 
         // Create lookup map
         const loiMap: Record<string, LOIEmail> = {};
-        loiData?.forEach((loi) => {
+        loiData?.forEach((loi: LOIEmail) => {
           loiMap[loi.tracking_id] = loi;
         });
         setLoiDetails(loiMap);

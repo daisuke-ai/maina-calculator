@@ -18,7 +18,11 @@ import {
   Calendar,
   Download,
   FileText,
-  LayoutDashboard
+  LayoutDashboard,
+  Phone,
+  PhoneIncoming,
+  PhoneOutgoing,
+  Clock
 } from 'lucide-react'
 import { downloadAgentsCSV, downloadAgentsPDF } from '@/lib/export-reports'
 
@@ -43,6 +47,18 @@ interface AgentStats {
   emails_replied_30d: number
   reply_rate_30d: number
   last_email_sent: string | null
+  // Call data
+  total_calls: number
+  inbound_calls: number
+  outbound_calls: number
+  answered_calls: number
+  missed_calls: number
+  total_duration: number
+  avg_duration: number
+  answer_rate: number
+  calls_30d: number
+  answered_calls_30d: number
+  answer_rate_30d: number
 }
 
 interface PipelineSummary {
@@ -145,12 +161,30 @@ export default function CRMDashboard() {
       }
     })
 
-  // Calculate summary stats
+  // Calculate summary stats - Emails
   const totalSent = agents.reduce((sum, a) => sum + a.total_sent, 0)
   const totalReplied = agents.reduce((sum, a) => sum + a.total_replied, 0)
   const avgReplyRate = agents.length > 0
     ? (agents.reduce((sum, a) => sum + (a.reply_rate || 0), 0) / agents.length).toFixed(1)
     : '0.0'
+
+  // Calculate summary stats - Calls
+  const totalCalls = agents.reduce((sum, a) => sum + (a.total_calls || 0), 0)
+  const totalAnswered = agents.reduce((sum, a) => sum + (a.answered_calls || 0), 0)
+  const totalDuration = agents.reduce((sum, a) => sum + (a.total_duration || 0), 0)
+  const avgCallDuration = totalCalls > 0
+    ? Math.round(totalDuration / totalCalls)
+    : 0
+  const avgAnswerRate = agents.length > 0
+    ? (agents.reduce((sum, a) => sum + (a.answer_rate || 0), 0) / agents.length).toFixed(1)
+    : '0.0'
+
+  // Format duration to minutes:seconds
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
 
   const toggleSort = (field: 'name' | 'sent' | 'reply_rate') => {
     if (sortBy === field) {
@@ -287,6 +321,50 @@ export default function CRMDashboard() {
           </Card>
         </div>
 
+        {/* Call Summary Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="p-6 bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-2 border-blue-500/30 shadow-xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Total Calls</p>
+                <p className="text-3xl font-bold text-foreground">{totalCalls.toLocaleString()}</p>
+              </div>
+              <Phone className="w-10 h-10 text-blue-500 opacity-40" />
+            </div>
+          </Card>
+
+          <Card className="p-6 bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-2 border-blue-500/30 shadow-xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Calls Answered</p>
+                <p className="text-3xl font-bold text-foreground">{totalAnswered.toLocaleString()}</p>
+              </div>
+              <PhoneIncoming className="w-10 h-10 text-blue-500 opacity-40" />
+            </div>
+          </Card>
+
+          <Card className="p-6 bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-2 border-blue-500/30 shadow-xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Avg Answer Rate</p>
+                <p className="text-3xl font-bold text-blue-500">{avgAnswerRate}%</p>
+              </div>
+              <TrendingUp className="w-10 h-10 text-blue-500 opacity-40" />
+            </div>
+          </Card>
+
+          <Card className="p-6 bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-2 border-blue-500/30 shadow-xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Avg Call Duration</p>
+                <p className="text-3xl font-bold text-foreground">{formatDuration(avgCallDuration)}</p>
+                <p className="text-xs text-muted-foreground mt-1">min:sec</p>
+              </div>
+              <Clock className="w-10 h-10 text-blue-500 opacity-40" />
+            </div>
+          </Card>
+        </div>
+
         {/* Pipeline Summary Stats */}
         {pipelineSummary && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -415,7 +493,8 @@ export default function CRMDashboard() {
                       <ArrowUpDown className="w-4 h-4" />
                     </button>
                   </th>
-                  <th className="px-6 py-4 text-center font-semibold text-sm text-foreground">Last 30 Days</th>
+                  <th className="px-6 py-4 text-center font-semibold text-sm text-foreground">Total Calls</th>
+                  <th className="px-6 py-4 text-center font-semibold text-sm text-foreground">Answer Rate</th>
                   <th className="px-6 py-4 text-center font-semibold text-sm text-foreground">Last Active</th>
                   <th className="px-6 py-4 text-center font-semibold text-sm text-foreground">Actions</th>
                 </tr>
@@ -447,10 +526,18 @@ export default function CRMDashboard() {
                     </td>
                     <td className="px-6 py-4 text-center">
                       <div className="text-sm">
-                        <div className="font-medium text-foreground">{agent.emails_sent_30d} sent</div>
-                        <div className="text-muted-foreground">
-                          {agent.emails_replied_30d} replied
+                        <div className="flex items-center justify-center gap-1">
+                          <Phone className="w-3 h-3 text-blue-500" />
+                          <span className="font-medium text-foreground">{agent.total_calls || 0}</span>
                         </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {agent.answered_calls || 0} answered
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-500/20 text-blue-500 border border-blue-500/30">
+                        {agent.answer_rate?.toFixed(1) || '0.0'}%
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center text-sm text-muted-foreground">

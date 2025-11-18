@@ -1,5 +1,5 @@
 // app/api/crm/agents/route.ts
-// API endpoint to get all agents with performance data
+// API endpoint to get all agents with performance data (emails + calls)
 
 import { NextRequest, NextResponse } from 'next/server';
 import {
@@ -8,6 +8,11 @@ import {
   getAgentPerformanceByRange,
   TIME_RANGES,
 } from '@/lib/supabase/crm-analytics';
+import {
+  getAllAgentCallPerformance,
+  getAgentCallActivity30d,
+  getAgentCallActivityByRange,
+} from '@/lib/supabase/call-analytics';
 import { AGENTS } from '@/config/agents';
 
 export async function GET(request: NextRequest) {
@@ -29,12 +34,16 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Get both all-time performance and time-range specific activity
-    const [performance, activityRange] = await Promise.all([
+    // Get both email and call data
+    const [performance, activityRange, callPerformance, callActivityRange] = await Promise.all([
       getAllAgentPerformance(),
       daysBack === TIME_RANGES.MONTH
         ? getAgentActivity30d() // Use existing 30d view
         : getAgentPerformanceByRange(daysBack), // Use time-range function
+      getAllAgentCallPerformance(),
+      daysBack === TIME_RANGES.MONTH
+        ? getAgentCallActivity30d()
+        : getAgentCallActivityByRange(daysBack),
     ]);
 
     // Combine with agent config data
@@ -79,10 +88,41 @@ export async function GET(request: NextRequest) {
         reply_rate_30d: activity.reply_rate_30d || activity.reply_rate || 0,
       };
 
+      // Get call performance data
+      const callPerfData = callPerformance.find((p: any) => p.agent_id === agent.id) || {
+        total_calls: 0,
+        inbound_calls: 0,
+        outbound_calls: 0,
+        answered_calls: 0,
+        missed_calls: 0,
+        voicemail_calls: 0,
+        total_duration: 0,
+        avg_duration: 0,
+        answer_rate: 0,
+        first_call: null,
+        last_call: null,
+      };
+
+      // Get call activity data
+      const callActivity = callActivityRange.find((a: any) => a.agent_id === agent.id) || {
+        calls_30d: 0,
+        inbound_calls_30d: 0,
+        outbound_calls_30d: 0,
+        answered_calls_30d: 0,
+        missed_calls_30d: 0,
+        total_duration_30d: 0,
+        avg_duration_30d: 0,
+        answer_rate_30d: 0,
+      };
+
       return {
         ...agent,
+        // Email data
         ...perfData,
         ...normalizedActivity,
+        // Call data
+        ...callPerfData,
+        ...callActivity,
       };
     });
 

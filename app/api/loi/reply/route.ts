@@ -105,8 +105,8 @@ export async function POST(request: NextRequest) {
       html: body.message,
       headers: {
         // Critical headers for email threading
-        'In-Reply-To': originalReply.message_id || undefined,
-        References: referenceIds.length > 0 ? referenceIds.join(' ') : undefined,
+        ...(originalReply.message_id ? { 'In-Reply-To': originalReply.message_id } : {}),
+        ...(referenceIds.length > 0 ? { References: referenceIds.join(' ') } : {}),
       },
       tags: [
         { name: 'type', value: 'loi_reply' },

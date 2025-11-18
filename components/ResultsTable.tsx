@@ -70,11 +70,13 @@ export function ResultsTable({ offers, propertyAddress = 'Property Address', ask
         // Recalculate loan amount (offer price - down payment)
         updated.loan_amount = newValue - updated.down_payment
         // Recalculate entry fee (down payment + rehab + closing costs)
-        updated.entry_fee = updated.down_payment + updated.rehab_cost + updated.closing_costs
+        // Note: closing_costs needs to be recalculated based on new offer price
+        const closing_costs = newValue * 0.03 // 3% closing costs
+        updated.final_entry_fee_amount = updated.down_payment + updated.rehab_cost + closing_costs
         // Recalculate entry fee percentage
-        updated.entry_fee_percentage = (updated.entry_fee / newValue) * 100
+        updated.final_entry_fee_percent = (updated.final_entry_fee_amount / newValue) * 100
         // Recalculate down payment percentage
-        updated.down_payment_percentage = (updated.down_payment / newValue) * 100
+        updated.down_payment_percent = (updated.down_payment / newValue) * 100
         break
 
       case 'down_payment':
@@ -82,22 +84,23 @@ export function ResultsTable({ offers, propertyAddress = 'Property Address', ask
         // Recalculate loan amount
         updated.loan_amount = updated.final_offer_price - newValue
         // Recalculate entry fee
-        updated.entry_fee = newValue + updated.rehab_cost + updated.closing_costs
+        const closing = updated.final_offer_price * 0.03
+        updated.final_entry_fee_amount = newValue + updated.rehab_cost + closing
         // Recalculate percentages
-        updated.entry_fee_percentage = (updated.entry_fee / updated.final_offer_price) * 100
-        updated.down_payment_percentage = (newValue / updated.final_offer_price) * 100
+        updated.final_entry_fee_percent = (updated.final_entry_fee_amount / updated.final_offer_price) * 100
+        updated.down_payment_percent = (newValue / updated.final_offer_price) * 100
         break
 
       case 'monthly_payment':
         updated.monthly_payment = newValue
         // Recalculate monthly cash flow (monthly rent - monthly payment - operating expenses)
         const monthly_operating = ((updated.final_offer_price * 0.015) + (updated.final_offer_price * 0.08/12) + 100)
-        updated.monthly_cash_flow = monthlyRent - newValue - monthly_operating
+        updated.final_monthly_cash_flow = monthlyRent - newValue - monthly_operating
         // Recalculate net rental yield
-        const annual_net_income = updated.monthly_cash_flow * 12
-        updated.net_rental_yield = (annual_net_income / updated.entry_fee) * 100
+        const annual_net_income = updated.final_monthly_cash_flow * 12
+        updated.net_rental_yield = (annual_net_income / updated.final_entry_fee_amount) * 100
         // Recalculate amortization period (loan amount / monthly payment / 12)
-        updated.amortization_period = updated.loan_amount / newValue / 12
+        updated.amortization_years = updated.loan_amount / newValue / 12
         // Recalculate principal paid during balloon period
         const months_until_balloon = updated.balloon_period * 12
         updated.principal_paid = Math.min(newValue * months_until_balloon, updated.loan_amount)
@@ -119,28 +122,29 @@ export function ResultsTable({ offers, propertyAddress = 'Property Address', ask
         const rehab = Math.max(6000, newValue)
         updated.rehab_cost = rehab
         // Recalculate entry fee
-        updated.entry_fee = updated.down_payment + rehab + updated.closing_costs
+        const closing_fee = updated.final_offer_price * 0.03
+        updated.final_entry_fee_amount = updated.down_payment + rehab + closing_fee
         // Recalculate entry fee percentage
-        updated.entry_fee_percentage = (updated.entry_fee / updated.final_offer_price) * 100
+        updated.final_entry_fee_percent = (updated.final_entry_fee_amount / updated.final_offer_price) * 100
         // Recalculate net rental yield (if it depends on entry fee)
-        const annual_net = updated.monthly_cash_flow * 12
-        updated.net_rental_yield = (annual_net / updated.entry_fee) * 100
+        const annual_net = updated.final_monthly_cash_flow * 12
+        updated.net_rental_yield = (annual_net / updated.final_entry_fee_amount) * 100
         break
     }
 
-    // Recalculate deal status based on new values
+    // Recalculate deal viability based on new values
     const yield_threshold = 15 // 15% minimum net rental yield
     const cash_flow_threshold = 200 // $200 minimum monthly cash flow
 
-    if (updated.net_rental_yield >= yield_threshold && updated.monthly_cash_flow >= cash_flow_threshold) {
-      updated.deal_status = 'good_deal'
-      updated.deal_status_message = 'All metrics meet or exceed target thresholds'
-    } else if (updated.net_rental_yield >= yield_threshold * 0.8 && updated.monthly_cash_flow >= cash_flow_threshold * 0.5) {
-      updated.deal_status = 'acceptable'
-      updated.deal_status_message = 'Metrics are acceptable but below optimal targets'
+    if (updated.net_rental_yield >= yield_threshold && updated.final_monthly_cash_flow >= cash_flow_threshold) {
+      updated.deal_viability = 'good'
+      updated.viability_reasons = ['All metrics meet or exceed target thresholds']
+    } else if (updated.net_rental_yield >= yield_threshold * 0.8 && updated.final_monthly_cash_flow >= cash_flow_threshold * 0.5) {
+      updated.deal_viability = 'marginal'
+      updated.viability_reasons = ['Metrics are acceptable but below optimal targets']
     } else {
-      updated.deal_status = 'poor_deal'
-      updated.deal_status_message = 'Metrics below minimum thresholds'
+      updated.deal_viability = 'not_viable'
+      updated.viability_reasons = ['Metrics below minimum thresholds']
     }
 
     return updated
@@ -348,7 +352,7 @@ export function ResultsTable({ offers, propertyAddress = 'Property Address', ask
 
               <tr className="border-b border-border hover:bg-muted/50 transition-colors">
                 <td className="py-3 px-4 font-semibold text-foreground sticky left-0 bg-card border-r border-border">Entry Fee</td>
-                {offers.map((offer) => (
+                {editableOffers.map((offer) => (
                   <td key={offer.offer_type} className="py-3 px-4 text-center border-l border-border">
                     <div className="font-bold text-foreground">{formatCurrency(offer.final_entry_fee_amount)}</div>
                     <div className="text-xs text-muted-foreground mt-0.5">{formatPercentage(offer.final_entry_fee_percent)}</div>
@@ -358,7 +362,7 @@ export function ResultsTable({ offers, propertyAddress = 'Property Address', ask
 
               <tr className="border-b border-border hover:bg-accent/10 transition-colors bg-accent/5">
                 <td className="py-3 px-4 font-semibold text-foreground sticky left-0 bg-accent/5 border-r border-border">Monthly Cash Flow</td>
-                {offers.map((offer) => (
+                {editableOffers.map((offer) => (
                   <td key={offer.offer_type} className="py-3 px-4 text-center font-bold text-accent border-l border-border">
                     {formatCurrency(offer.final_monthly_cash_flow)}
                   </td>
@@ -367,7 +371,7 @@ export function ResultsTable({ offers, propertyAddress = 'Property Address', ask
 
               <tr className="border-b-2 border-border hover:bg-accent/10 transition-colors bg-accent/5">
                 <td className="py-3 px-4 font-semibold text-foreground sticky left-0 bg-accent/5 border-r border-border">Net Rental Yield</td>
-                {offers.map((offer) => (
+                {editableOffers.map((offer) => (
                   <td key={offer.offer_type} className="py-3 px-4 text-center font-bold text-accent border-l border-border">
                     {formatPercentage(offer.net_rental_yield)}
                   </td>
@@ -432,7 +436,7 @@ export function ResultsTable({ offers, propertyAddress = 'Property Address', ask
 
               <tr className="border-b border-border hover:bg-muted/50 transition-colors">
                 <td className="py-3 px-4 font-semibold text-foreground sticky left-0 bg-card border-r border-border">Loan Amount</td>
-                {offers.map((offer) => (
+                {editableOffers.map((offer) => (
                   <td key={offer.offer_type} className="py-3 px-4 text-center font-semibold text-foreground border-l border-border">
                     {formatCurrency(offer.loan_amount)}
                   </td>
@@ -494,7 +498,7 @@ export function ResultsTable({ offers, propertyAddress = 'Property Address', ask
 
               <tr className="border-b border-border hover:bg-muted/50 transition-colors">
                 <td className="py-3 px-4 font-semibold text-foreground sticky left-0 bg-card border-r border-border">Amortization Period</td>
-                {offers.map((offer) => (
+                {editableOffers.map((offer) => (
                   <td key={offer.offer_type} className="py-3 px-4 text-center font-semibold text-foreground border-l border-border">
                     {offer.amortization_years.toFixed(1)} years
                   </td>
@@ -550,7 +554,7 @@ export function ResultsTable({ offers, propertyAddress = 'Property Address', ask
 
               <tr className="border-b-2 border-border hover:bg-muted/50 transition-colors">
                 <td className="py-3 px-4 font-semibold text-foreground sticky left-0 bg-card border-r border-border">Balloon Payment</td>
-                {offers.map((offer) => (
+                {editableOffers.map((offer) => (
                   <td key={offer.offer_type} className="py-3 px-4 text-center font-bold text-foreground border-l border-border">
                     {formatCurrency(offer.balloon_payment)}
                   </td>
@@ -566,7 +570,7 @@ export function ResultsTable({ offers, propertyAddress = 'Property Address', ask
 
               <tr className="border-b border-border hover:bg-accent/10 transition-colors">
                 <td className="py-3 px-4 font-semibold text-foreground sticky left-0 bg-card border-r border-border">Appreciation Profit</td>
-                {offers.map((offer) => (
+                {editableOffers.map((offer) => (
                   <td key={offer.offer_type} className="py-3 px-4 text-center font-bold text-accent border-l border-border">
                     {formatCurrency(offer.appreciation_profit)}
                   </td>
@@ -575,7 +579,7 @@ export function ResultsTable({ offers, propertyAddress = 'Property Address', ask
 
               <tr className="border-b border-border hover:bg-muted/50 transition-colors">
                 <td className="py-3 px-4 font-semibold text-foreground sticky left-0 bg-card border-r border-border">Principal Paid</td>
-                {offers.map((offer) => (
+                {editableOffers.map((offer) => (
                   <td key={offer.offer_type} className="py-3 px-4 text-center font-semibold text-foreground border-l border-border">
                     {formatCurrency(offer.principal_paid)}
                   </td>

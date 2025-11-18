@@ -60,15 +60,31 @@ export class SellerFinanceCalculator {
     }
   }
 
+  // Calculate tiered markup percentage based on listing price
+  private calculateTieredMarkup(listed_price: number): number {
+    if (listed_price >= 300000) {
+      return 0.30 // 30% for $300k+
+    } else if (listed_price >= 200000) {
+      return 0.20 // 20% for $200k-$299k
+    } else if (listed_price >= 100000) {
+      return 0.10 // 10% for $100k-$199k
+    } else {
+      return 0.10 // 10% for under $100k
+    }
+  }
+
   calculateMaxOwnerFavoredOffer(property_data: PropertyData): OfferResult {
     const offer_cfg = this.config.offers.owner_favored
     const balloon_period = offer_cfg.balloon_period
     const rehab_cost = this.utils.calculateRehabCost()
 
-    // Calculate future value and offer price
+    // Calculate offer price with tiered markup
+    const markup_percent = this.calculateTieredMarkup(property_data.listed_price)
+    const offer_price = property_data.listed_price * (1 + markup_percent)
+
+    // Calculate appreciation profit (future value - offer price)
     const future_value = this.utils.calculateAppreciatedValue(property_data.listed_price, balloon_period)
-    const appreciation_profit = offer_cfg.appreciation_profit_fixed
-    const offer_price = future_value - appreciation_profit
+    const appreciation_profit = future_value - offer_price
 
     // Start with max entry fee
     let entry_fee_percent = offer_cfg.entry_fee_max_percent
@@ -159,8 +175,9 @@ export class SellerFinanceCalculator {
     const balloon_period = offer_cfg.balloon_period
     const rehab_cost = this.utils.calculateRehabCost()
 
-    // Average the offer prices from owner and buyer
-    const offer_price = (owner_offer.final_offer_price + buyer_offer.final_offer_price) / 2
+    // Calculate offer price with HALF the tiered markup
+    const markup_percent = this.calculateTieredMarkup(property_data.listed_price)
+    const offer_price = property_data.listed_price * (1 + (markup_percent / 2))
 
     // Calculate future value and appreciation profit
     const future_value = this.utils.calculateAppreciatedValue(property_data.listed_price, balloon_period)
