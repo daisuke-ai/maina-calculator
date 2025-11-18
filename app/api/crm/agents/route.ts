@@ -35,15 +35,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Get both email and call data
+    // For month view, use optimized views; for other ranges, use time-range functions
     const [performance, activityRange, callPerformance, callActivityRange] = await Promise.all([
-      getAllAgentPerformance(),
-      daysBack === TIME_RANGES.MONTH
-        ? getAgentActivity30d() // Use existing 30d view
-        : getAgentPerformanceByRange(daysBack), // Use time-range function
-      getAllAgentCallPerformance(),
-      daysBack === TIME_RANGES.MONTH
-        ? getAgentCallActivity30d()
-        : getAgentCallActivityByRange(daysBack),
+      getAllAgentPerformance(), // All-time performance data
+      getAgentPerformanceByRange(daysBack), // Always use range function for consistency
+      getAllAgentCallPerformance(), // All-time call performance
+      getAgentCallActivityByRange(daysBack), // Always use range function for consistency
     ]);
 
     // Combine with agent config data
@@ -66,26 +63,23 @@ export async function GET(request: NextRequest) {
         last_reply_received: null,
       };
 
-      // Map time-range data to match expected structure
+      // Get time-range email data
       const activity = activityRange.find((a: any) => a.agent_id === agent.id) || {
         agent_id: agent.id,
         agent_name: agent.aliasName,
-        emails_sent_30d: 0,
         emails_sent: 0,
-        emails_opened_30d: 0,
         emails_opened: 0,
-        emails_replied_30d: 0,
         emails_replied: 0,
-        reply_rate_30d: 0,
         reply_rate: 0,
       };
 
-      // Normalize the activity data
+      // Normalize the activity data to consistent format
+      // These values come from get_agent_activity_by_range SQL function
       const normalizedActivity = {
-        emails_sent_30d: activity.emails_sent_30d || activity.emails_sent || 0,
-        emails_opened_30d: activity.emails_opened_30d || activity.emails_opened || 0,
-        emails_replied_30d: activity.emails_replied_30d || activity.emails_replied || 0,
-        reply_rate_30d: activity.reply_rate_30d || activity.reply_rate || 0,
+        emails_sent_30d: activity.emails_sent || 0,
+        emails_opened_30d: activity.emails_opened || 0,
+        emails_replied_30d: activity.emails_replied || 0,
+        reply_rate_30d: activity.reply_rate || 0,
       };
 
       // Get call performance data
@@ -103,26 +97,41 @@ export async function GET(request: NextRequest) {
         last_call: null,
       };
 
-      // Get call activity data
+      // Get call activity data for time range
       const callActivity = callActivityRange.find((a: any) => a.agent_id === agent.id) || {
-        calls_30d: 0,
-        inbound_calls_30d: 0,
-        outbound_calls_30d: 0,
-        answered_calls_30d: 0,
-        missed_calls_30d: 0,
-        total_duration_30d: 0,
-        avg_duration_30d: 0,
-        answer_rate_30d: 0,
+        agent_id: agent.id,
+        agent_name: agent.aliasName,
+        total_calls: 0,
+        inbound_calls: 0,
+        outbound_calls: 0,
+        answered_calls: 0,
+        missed_calls: 0,
+        total_duration: 0,
+        avg_duration: 0,
+        answer_rate: 0,
+      };
+
+      // Normalize call activity data to match expected 30d field names
+      // These values come from get_agent_call_activity_by_range SQL function
+      const normalizedCallActivity = {
+        calls_30d: callActivity.total_calls || 0,
+        inbound_calls_30d: callActivity.inbound_calls || 0,
+        outbound_calls_30d: callActivity.outbound_calls || 0,
+        answered_calls_30d: callActivity.answered_calls || 0,
+        missed_calls_30d: callActivity.missed_calls || 0,
+        total_duration_30d: callActivity.total_duration || 0,
+        avg_duration_30d: callActivity.avg_duration || 0,
+        answer_rate_30d: callActivity.answer_rate || 0,
       };
 
       return {
         ...agent,
-        // Email data
+        // Email data (all-time + normalized range)
         ...perfData,
         ...normalizedActivity,
-        // Call data
+        // Call data (all-time + normalized range)
         ...callPerfData,
-        ...callActivity,
+        ...normalizedCallActivity,
       };
     });
 

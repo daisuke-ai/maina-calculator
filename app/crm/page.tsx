@@ -87,7 +87,7 @@ export default function CRMDashboard() {
 
   useEffect(() => {
     fetchAgents()
-    fetchPipelineSummary()
+    fetchPipelineSummary(timeRange)
   }, [timeRange])
 
   const fetchAgents = async () => {
@@ -109,13 +109,29 @@ export default function CRMDashboard() {
     }
   }
 
-  const fetchPipelineSummary = async () => {
+  const fetchPipelineSummary = async (range: TimeRange = timeRange) => {
     try {
-      const response = await fetch('/api/crm/pipeline/analytics/summary?days_back=30')
+      // Map time range to days for API call
+      const daysBackMap: Record<TimeRange, number> = {
+        'week': 7,
+        'month': 30,
+        'quarter': 90,
+        'year': 365,
+        'all': 999999,
+      }
+
+      const daysBack = daysBackMap[range] || 30
+
+      const response = await fetch(`/api/crm/pipeline/analytics/summary?days_back=${daysBack}`)
       const result = await response.json()
 
       if (response.ok && result.summary) {
-        setPipelineSummary(result.summary.allTime)
+        // Show time-range metrics when not viewing all-time
+        const metricsToShow = range === 'all' ? result.summary.allTime : result.summary.timeRange
+        setPipelineSummary({
+          ...metricsToShow,
+          _timeRange: range,
+        })
       }
     } catch (err: any) {
       console.error('Failed to fetch pipeline summary:', err)
