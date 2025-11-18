@@ -44,7 +44,7 @@ INSERT INTO agents (id, real_name, alias_name, email, phone) VALUES
   (24, 'Team C', 'Team C', 'vanguardhorizon.reit-c@miana.com.co', '(406) 229-9324'),
   (25, 'Mian', 'Mian', 'mian@miana.com.co', '(661) 605-0329'),
   (26, 'Ifaf', 'Ifaf Shahab', 'ifaf@miana.com.co', '(559) 421-2021'),
-  (27, 'Shahab', 'Shahab Javed', 'shahabjaved99@gmail.com', '(559) 570-0778'),
+  (27, 'Shahab', 'Shahab Javed', 'sheb@miana.com.co', '(559) 570-0778'),
   (28, 'Support', 'English Issue', 'abdullah31615@gmail.com', '(559) 206-7202')
 ON CONFLICT (id) DO UPDATE SET
   real_name = EXCLUDED.real_name,

@@ -28,7 +28,7 @@ export const AGENTS = [
   // Additional RingCentral agents
   { id: 25, realName: "Mian", aliasName: "Mian", email: "mian@miana.com.co", phone: "(661) 605-0329" },
   { id: 26, realName: "Ifaf", aliasName: "Ifaf Shahab", email: "ifaf@miana.com.co", phone: "(559) 421-2021" },
-  { id: 27, realName: "Shahab", aliasName: "Shahab Javed", email: "shahabjaved99@gmail.com", phone: "(559) 570-0778" },
+  { id: 27, realName: "Shahab", aliasName: "Shahab Javed", email: "sheb@miana.com.co", phone: "(559) 570-0778" },
   { id: 28, realName: "Support", aliasName: "English Issue", email: "abdullah31615@gmail.com", phone: "(559) 206-7202" },
 ] as const;
 
