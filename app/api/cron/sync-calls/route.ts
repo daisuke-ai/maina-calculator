@@ -17,10 +17,10 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Calculate date range for last 24 hours
+    // Calculate date range for last 2 days (since we only run once daily on Hobby plan)
     const dateTo = new Date();
     const dateFrom = new Date();
-    dateFrom.setDate(dateFrom.getDate() - 1);
+    dateFrom.setDate(dateFrom.getDate() - 2);
 
     // Call the sync API internally
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
