@@ -22,7 +22,10 @@ import {
   Phone,
   PhoneIncoming,
   PhoneOutgoing,
-  Clock
+  Clock,
+  RefreshCw,
+  CheckCircle,
+  AlertCircle
 } from 'lucide-react'
 import { downloadAgentsCSV, downloadAgentsPDF } from '@/lib/export-reports'
 
@@ -76,6 +79,8 @@ export default function CRMDashboard() {
   const [sortBy, setSortBy] = useState<'name' | 'sent' | 'reply_rate'>('reply_rate')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [timeRange, setTimeRange] = useState<TimeRange>('month')
+  const [syncing, setSyncing] = useState(false)
+  const [syncMessage, setSyncMessage] = useState<{ type: 'success' | 'error' | null; text: string }>({ type: null, text: '' })
 
   useEffect(() => {
     fetchAgents()
@@ -209,6 +214,61 @@ export default function CRMDashboard() {
     return date.toLocaleDateString()
   }
 
+  const syncCallData = async () => {
+    setSyncing(true)
+    setSyncMessage({ type: null, text: '' })
+
+    try {
+      // Calculate date range for last 30 days
+      const dateTo = new Date()
+      const dateFrom = new Date()
+      dateFrom.setDate(dateFrom.getDate() - 30)
+
+      const response = await fetch('/api/ringcentral/sync-calls', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          dateFrom: dateFrom.toISOString(),
+          dateTo: dateTo.toISOString(),
+          perPage: 500
+        })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to sync call data')
+      }
+
+      setSyncMessage({
+        type: 'success',
+        text: `Successfully synced ${result.synced || 0} call records`
+      })
+
+      // Refresh agent data to show new call metrics
+      await fetchAgents()
+
+      // Clear success message after 5 seconds
+      setTimeout(() => {
+        setSyncMessage({ type: null, text: '' })
+      }, 5000)
+    } catch (err: any) {
+      setSyncMessage({
+        type: 'error',
+        text: err.message || 'Failed to sync call data'
+      })
+
+      // Clear error message after 10 seconds
+      setTimeout(() => {
+        setSyncMessage({ type: null, text: '' })
+      }, 10000)
+    } finally {
+      setSyncing(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen py-12 px-4 flex items-center justify-center">
@@ -264,6 +324,21 @@ export default function CRMDashboard() {
               </button>
             </Link>
 
+            {/* Sync Button */}
+            <button
+              onClick={syncCallData}
+              disabled={syncing || loading}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all shadow-lg border-2 ${
+                syncing
+                  ? 'bg-accent/50 text-accent-foreground/50 border-accent/30 cursor-wait'
+                  : 'bg-green-600 hover:bg-green-500 text-white border-green-500'
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
+              title="Sync call data from RingCentral"
+            >
+              <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+              {syncing ? 'Syncing...' : 'Sync Calls'}
+            </button>
+
             {/* Export Buttons */}
             <div className="flex gap-2">
               <button
@@ -287,6 +362,24 @@ export default function CRMDashboard() {
             </div>
           </div>
         </div>
+
+        {/* Sync Status Message */}
+        {syncMessage.type && (
+          <div
+            className={`p-4 rounded-xl flex items-center gap-3 transition-all shadow-lg border-2 ${
+              syncMessage.type === 'success'
+                ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300'
+                : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300'
+            }`}
+          >
+            {syncMessage.type === 'success' ? (
+              <CheckCircle className="w-5 h-5" />
+            ) : (
+              <AlertCircle className="w-5 h-5" />
+            )}
+            <p className="font-medium">{syncMessage.text}</p>
+          </div>
+        )}
 
         {/* Email Summary Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
