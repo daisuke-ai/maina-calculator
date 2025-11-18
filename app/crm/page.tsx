@@ -147,6 +147,15 @@ export default function CRMDashboard() {
   ]
 
   // Filter and sort agents
+  // Helper function to get the right field based on time range
+  const getEmailSentField = () => timeRange === 'all' ? 'total_sent' : 'emails_sent_30d'
+  const getEmailRepliedField = () => timeRange === 'all' ? 'total_replied' : 'emails_replied_30d'
+  const getReplyRateField = () => timeRange === 'all' ? 'reply_rate' : 'reply_rate_30d'
+  const getCallsField = () => timeRange === 'all' ? 'total_calls' : 'calls_30d'
+  const getAnsweredCallsField = () => timeRange === 'all' ? 'answered_calls' : 'answered_calls_30d'
+  const getDurationField = () => timeRange === 'all' ? 'total_duration' : 'total_duration_30d'
+  const getAnswerRateField = () => timeRange === 'all' ? 'answer_rate' : 'answer_rate_30d'
+
   const filteredAgents = agents
     .filter(agent => {
       const searchLower = searchTerm.toLowerCase()
@@ -165,12 +174,14 @@ export default function CRMDashboard() {
           bVal = b.aliasName
           break
         case 'sent':
-          aVal = a.total_sent
-          bVal = b.total_sent
+          // Use dynamic field based on time range
+          aVal = a[getEmailSentField() as keyof typeof a] || 0
+          bVal = b[getEmailSentField() as keyof typeof b] || 0
           break
         case 'reply_rate':
-          aVal = a.reply_rate || 0
-          bVal = b.reply_rate || 0
+          // Use dynamic field based on time range
+          aVal = a[getReplyRateField() as keyof typeof a] || 0
+          bVal = b[getReplyRateField() as keyof typeof b] || 0
           break
         default:
           return 0
@@ -185,22 +196,31 @@ export default function CRMDashboard() {
       }
     })
 
-  // Calculate summary stats - Emails
-  const totalSent = agents.reduce((sum, a) => sum + a.total_sent, 0)
-  const totalReplied = agents.reduce((sum, a) => sum + a.total_replied, 0)
+  // Calculate summary stats - Emails (using time-range aware fields)
+  const emailSentField = getEmailSentField() as keyof AgentStats
+  const emailRepliedField = getEmailRepliedField() as keyof AgentStats
+  const replyRateField = getReplyRateField() as keyof AgentStats
+
+  const totalSent = agents.reduce((sum, a) => sum + (a[emailSentField] as number || 0), 0)
+  const totalReplied = agents.reduce((sum, a) => sum + (a[emailRepliedField] as number || 0), 0)
   const avgReplyRate = agents.length > 0
-    ? (agents.reduce((sum, a) => sum + (a.reply_rate || 0), 0) / agents.length).toFixed(1)
+    ? (agents.reduce((sum, a) => sum + (a[replyRateField] as number || 0), 0) / agents.length).toFixed(1)
     : '0.0'
 
-  // Calculate summary stats - Calls
-  const totalCalls = agents.reduce((sum, a) => sum + (a.total_calls || 0), 0)
-  const totalAnswered = agents.reduce((sum, a) => sum + (a.answered_calls || 0), 0)
-  const totalDuration = agents.reduce((sum, a) => sum + (a.total_duration || 0), 0)
+  // Calculate summary stats - Calls (using time-range aware fields)
+  const callsField = getCallsField() as keyof AgentStats
+  const answeredCallsField = getAnsweredCallsField() as keyof AgentStats
+  const durationField = getDurationField() as keyof AgentStats
+  const answerRateField = getAnswerRateField() as keyof AgentStats
+
+  const totalCalls = agents.reduce((sum, a) => sum + (a[callsField] as number || 0), 0)
+  const totalAnswered = agents.reduce((sum, a) => sum + (a[answeredCallsField] as number || 0), 0)
+  const totalDuration = agents.reduce((sum, a) => sum + (a[durationField] as number || 0), 0)
   const avgCallDuration = totalCalls > 0
     ? Math.round(totalDuration / totalCalls)
     : 0
   const avgAnswerRate = agents.length > 0
-    ? (agents.reduce((sum, a) => sum + (a.answer_rate || 0), 0) / agents.length).toFixed(1)
+    ? (agents.reduce((sum, a) => sum + (a[answerRateField] as number || 0), 0) / agents.length).toFixed(1)
     : '0.0'
 
   // Format duration to minutes:seconds
@@ -480,6 +500,13 @@ export default function CRMDashboard() {
           </div>
         )}
 
+        {/* Data Range Indicator */}
+        <div className="flex items-center justify-between px-4 py-2 bg-accent/10 border-l-4 border-accent rounded-lg">
+          <p className="text-sm font-medium text-foreground">
+            Showing data for: <span className="text-accent font-semibold">{timeRangeOptions.find(o => o.value === timeRange)?.label || 'All Time'}</span>
+          </p>
+        </div>
+
         {/* Email Summary Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="p-6 bg-card border-2 border-border shadow-xl">
@@ -570,10 +597,10 @@ export default function CRMDashboard() {
                       currency: 'USD',
                       minimumFractionDigits: 0,
                       maximumFractionDigits: 0,
-                    }).format(pipelineSummary.active_pipeline_value)}
+                    }).format((pipelineSummary.active_pipeline_value as number) || 0)}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {pipelineSummary.total_active_deals} deals in pipeline
+                    {(pipelineSummary.total_active_deals as number) || 0} deals in pipeline
                   </p>
                 </div>
                 <LayoutDashboard className="w-10 h-10 text-green-500 opacity-40" />
@@ -584,8 +611,10 @@ export default function CRMDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Active Deals</p>
-                  <p className="text-3xl font-bold text-foreground">{pipelineSummary.total_active_deals}</p>
-                  <p className="text-xs text-muted-foreground mt-1">Properties under contract</p>
+                  <p className="text-3xl font-bold text-foreground">{(pipelineSummary.total_active_deals as number) || 0}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {timeRange === 'all' ? 'All-time' : `${timeRangeOptions.find(o => o.value === timeRange)?.label || 'Recent'}`}
+                  </p>
                 </div>
                 <TrendingUp className="w-10 h-10 text-green-500 opacity-40" />
               </div>
@@ -594,9 +623,11 @@ export default function CRMDashboard() {
             <Card className="p-6 bg-gradient-to-br from-green-500/10 to-green-600/5 border-2 border-green-500/30 shadow-xl">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Pipeline Conv. Rate</p>
-                  <p className="text-3xl font-bold text-green-500">{pipelineSummary.overall_conversion_rate}%</p>
-                  <p className="text-xs text-muted-foreground mt-1">All-time conversion</p>
+                  <p className="text-sm text-muted-foreground mb-1">Conversion Rate</p>
+                  <p className="text-3xl font-bold text-green-500">{((pipelineSummary.overall_conversion_rate as number) || 0).toFixed(1)}%</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {timeRange === 'all' ? 'All-time' : `${timeRangeOptions.find(o => o.value === timeRange)?.label || 'Recent'}`}
+                  </p>
                 </div>
                 <BarChart3 className="w-10 h-10 text-green-500 opacity-40" />
               </div>
@@ -706,30 +737,30 @@ export default function CRMDashboard() {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center font-medium text-foreground">
-                      {agent.total_sent}
+                      {(agent[emailSentField] as number) || 0}
                     </td>
                     <td className="px-6 py-4 text-center font-medium text-foreground">
-                      {agent.total_replied}
+                      {(agent[emailRepliedField] as number) || 0}
                     </td>
                     <td className="px-6 py-4 text-center">
                       <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-accent/20 text-accent border border-accent/30">
-                        {agent.reply_rate?.toFixed(1) || '0.0'}%
+                        {((agent[replyRateField] as number) || 0).toFixed(1)}%
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
                       <div className="text-sm">
                         <div className="flex items-center justify-center gap-1">
                           <Phone className="w-3 h-3 text-blue-500" />
-                          <span className="font-medium text-foreground">{agent.total_calls || 0}</span>
+                          <span className="font-medium text-foreground">{(agent[callsField] as number) || 0}</span>
                         </div>
                         <div className="text-xs text-muted-foreground mt-1">
-                          {agent.answered_calls || 0} answered
+                          {(agent[answeredCallsField] as number) || 0} answered
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
                       <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-500/20 text-blue-500 border border-blue-500/30">
-                        {agent.answer_rate?.toFixed(1) || '0.0'}%
+                        {((agent[answerRateField] as number) || 0).toFixed(1)}%
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center text-sm text-muted-foreground">
