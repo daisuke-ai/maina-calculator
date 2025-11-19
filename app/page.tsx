@@ -18,6 +18,12 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null)
 
   const handleDataFetched = React.useCallback((data: PropertyAPIData) => {
+    // Reset all state when new address is searched (same as Start Over)
+    setOffers([])
+    setLoading(false)
+    setError(null)
+
+    // Set the new property data
     setPropertyAPIData(data)
     setPropertyData({
       listed_price: data.LISTED_PRICE_FINAL || 0,
@@ -27,8 +33,6 @@ export default function Home() {
       monthly_hoa_fee: data.MONTHLY_HOA_FEE_FINAL || 0,
       monthly_other_fees: 150,
     })
-    setOffers([])
-    setError(null)
   }, [])
 
   const handleFormChange = React.useCallback((data: PropertyData) => {

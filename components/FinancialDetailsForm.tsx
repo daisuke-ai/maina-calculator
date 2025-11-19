@@ -11,9 +11,7 @@ import {
   Building2,
   Plus,
   Info,
-  TrendingUp,
-  Lock,
-  Unlock
+  TrendingUp
 } from 'lucide-react'
 
 interface FinancialDetailsFormProps {
@@ -144,13 +142,6 @@ export function FinancialDetailsForm({
   })
 
   const [showTooltip, setShowTooltip] = React.useState<string | null>(null)
-  // Lock fields when data is first fetched from API
-  const [isLocked, setIsLocked] = React.useState(true)
-
-  // Reset lock state when propertyAPIData changes (new property fetched or Start Over clicked)
-  React.useEffect(() => {
-    setIsLocked(true) // Lock fields when new data arrives
-  }, [propertyAPIData.ADDRESS]) // Use ADDRESS as dependency to detect new property
 
   React.useEffect(() => {
     onFormChange(formData)
@@ -190,24 +181,6 @@ export function FinancialDetailsForm({
             <p className="text-xs text-muted-foreground">Review and adjust property financials</p>
           </div>
         </div>
-
-        {/* Lock/Unlock Button */}
-        <button
-          onClick={() => setIsLocked(!isLocked)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-card border-2 border-border hover:border-accent transition-all duration-200 hover:scale-105"
-        >
-          {isLocked ? (
-            <>
-              <Lock className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-foreground">Unlock to Edit</span>
-            </>
-          ) : (
-            <>
-              <Unlock className="w-4 h-4 text-accent" />
-              <span className="text-sm font-medium text-accent">Unlocked</span>
-            </>
-          )}
-        </button>
       </div>
 
       {/* Main Card */}
@@ -232,7 +205,6 @@ export function FinancialDetailsForm({
                 onChange={handleFieldChange}
                 showTooltip={showTooltip}
                 setShowTooltip={setShowTooltip}
-                disabled={isLocked}
               />
               <InputField
                 icon={TrendingUp}
@@ -245,7 +217,6 @@ export function FinancialDetailsForm({
                 onChange={handleFieldChange}
                 showTooltip={showTooltip}
                 setShowTooltip={setShowTooltip}
-                disabled={isLocked}
               />
             </div>
 
@@ -266,7 +237,6 @@ export function FinancialDetailsForm({
                 onChange={handleFieldChange}
                 showTooltip={showTooltip}
                 setShowTooltip={setShowTooltip}
-                disabled={isLocked}
               />
               <InputField
                 icon={Shield}
@@ -279,7 +249,6 @@ export function FinancialDetailsForm({
                 onChange={handleFieldChange}
                 showTooltip={showTooltip}
                 setShowTooltip={setShowTooltip}
-                disabled={isLocked}
               />
               <InputField
                 icon={Building2}
@@ -292,7 +261,6 @@ export function FinancialDetailsForm({
                 onChange={handleFieldChange}
                 showTooltip={showTooltip}
                 setShowTooltip={setShowTooltip}
-                disabled={isLocked}
               />
               <InputField
                 icon={Plus}
@@ -305,7 +273,6 @@ export function FinancialDetailsForm({
                 onChange={handleFieldChange}
                 showTooltip={showTooltip}
                 setShowTooltip={setShowTooltip}
-                disabled={isLocked}
               />
             </div>
           </div>
