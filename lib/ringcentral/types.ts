@@ -34,6 +34,7 @@ export interface RingCentralCallRecord {
   extension?: {
     id: string;
     uri: string;
+    extensionNumber?: string;
   };
   reason?: string;
   reasonDescription?: string;
@@ -49,13 +50,18 @@ export interface CallLeg {
   result: string;
   to?: {
     phoneNumber?: string;
+    extensionNumber?: string;
+    extensionId?: string;
     name?: string;
   };
   from?: {
     phoneNumber?: string;
+    extensionNumber?: string;
+    extensionId?: string;
     name?: string;
   };
   transport?: 'PSTN' | 'VoIP';
+  legType?: string;
   recording?: {
     id: string;
     uri: string;
@@ -65,6 +71,7 @@ export interface CallLeg {
   extension?: {
     id: string;
     uri: string;
+    extensionNumber?: string;
   };
 }
 
