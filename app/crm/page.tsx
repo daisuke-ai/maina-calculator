@@ -500,7 +500,7 @@ export default function CRMDashboard() {
                       <p className="text-xs text-muted-foreground">received</p>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-accent/10 text-accent-foreground border border-accent/20">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-muted text-foreground border">
                         {((agent[replyRateField] as number) || 0).toFixed(1)}%
                       </span>
                     </td>
