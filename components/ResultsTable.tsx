@@ -301,17 +301,37 @@ export function ResultsTable({
         const rehabCost = Math.max(CONFIG.min_rehab_cost, newValue)
         updated.rehab_cost = rehabCost
 
-        // Recalculate entry fee (Down Payment + Rehab + Closing + Assignment)
+        // Entry fee stays FIXED at the original percentage
+        // Down payment ADJUSTS to maintain fixed entry fee
         const closingCost = updated.final_offer_price * CONFIG.closing_cost_percent
-        const entryFeeAmount = updated.down_payment + rehabCost + closingCost + CONFIG.assignment_fee
-        updated.final_entry_fee_amount = entryFeeAmount
-        updated.final_entry_fee_percent = (entryFeeAmount / updated.final_offer_price) * 100
+        const entryFeeAmount = updated.final_entry_fee_amount // Keep entry fee fixed
 
-        // Cash flow unchanged (doesn't depend on rehab cost)
-        // But net rental yield changes because entry fee changed
+        // Recalculate down payment
+        const downPayment = entryFeeAmount - rehabCost - closingCost - CONFIG.assignment_fee
+        updated.down_payment = downPayment
+        updated.down_payment_percent = (downPayment / updated.final_offer_price) * 100
+
+        // Recalculate loan amount (offer - down payment)
+        const loanAmount = updated.final_offer_price - downPayment
+        updated.loan_amount = loanAmount
+
+        // Recalculate monthly payment (loan / months)
+        const monthlyPayment = loanAmount / (updated.amortization_years * 12)
+        updated.monthly_payment = monthlyPayment
+
+        // Recalculate cash flow (rent - expenses - payment)
+        const nonDebtExpenses = calculateNonDebtExpenses()
+        updated.final_monthly_cash_flow = propertyData.monthly_rent - nonDebtExpenses - monthlyPayment
+
+        // Recalculate net rental yield
         const annualNetIncome = updated.final_monthly_cash_flow * 12
         updated.net_rental_yield = (annualNetIncome / entryFeeAmount) * 100
         updated.final_coc_percent = updated.net_rental_yield
+
+        // Recalculate balloon payment
+        const principalPaid = monthlyPayment * 12 * updated.balloon_period
+        updated.principal_paid = principalPaid
+        updated.balloon_payment = Math.max(0, loanAmount - principalPaid)
         break
       }
     }
