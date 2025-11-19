@@ -109,7 +109,7 @@ export const PHONE_NUMBER_TO_AGENT: Record<string, number> = {
 /**
  * Get agent ID from RingCentral extension number
  */
-export function getAgentIdFromExtension(extension: string | undefined): number | null {
+export function getAgentIdFromExtension(extension: string | undefined | null): number | null {
   if (!extension) return null;
 
   // Clean extension (remove any non-digits)
@@ -122,7 +122,7 @@ export function getAgentIdFromExtension(extension: string | undefined): number |
  * Get agent ID from phone number
  * Tries multiple formats
  */
-export function getAgentIdFromPhone(phoneNumber: string | undefined): number | null {
+export function getAgentIdFromPhone(phoneNumber: string | undefined | null): number | null {
   if (!phoneNumber) return null;
 
   // Clean phone number (digits only)
@@ -165,9 +165,9 @@ export function getAgentIdFromPhone(phoneNumber: string | undefined): number | n
  * Tries extension first (most reliable), then phone number
  */
 export function getAgentIdFromCallRecord(
-  extensionNumber: string | undefined,
-  phoneNumber: string | undefined,
-  extensionId?: string | undefined
+  extensionNumber: string | undefined | null,
+  phoneNumber: string | undefined | null,
+  extensionId?: string | undefined | null
 ): number | null {
   // Try extension number first (most reliable)
   const fromExtension = getAgentIdFromExtension(extensionNumber);
@@ -184,7 +184,7 @@ export function getAgentIdFromCallRecord(
 }
 
 // Export a debug function to check mappings
-export function debugMapping(extensionNumber?: string, phoneNumber?: string): void {
+export function debugMapping(extensionNumber?: string | null, phoneNumber?: string | null): void {
   console.log('=== RingCentral Mapping Debug ===');
   console.log('Extension:', extensionNumber);
   console.log('Phone:', phoneNumber);
