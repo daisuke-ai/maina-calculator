@@ -1,5 +1,5 @@
-// scripts/debug-unmapped-calls.mjs
-// Check what extensions are not being mapped
+#!/usr/bin/env node
+// Debug script to find unmapped extensions and phone numbers
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
@@ -8,94 +8,110 @@ import { dirname, join } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Load .env.local from project root
+// Load .env.local
 dotenv.config({ path: join(__dirname, '..', '.env.local') });
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+// Hardcode the mapping to avoid import issues
+const RINGCENTRAL_EXTENSION_TO_AGENT = {
+  '101': 11, '102': 10, '103': 9, '104': 6, '105': 5, '106': 16, '107': 12,
+  '108': 7, '109': 8, '110': 25, '111': 17, '113': 21, '114': 3, '117': 28,
+  '118': 26, '119': 27, '120': 19, '121': 15, '122': 20, '123': 2
+};
+
 async function debugUnmappedCalls() {
-  console.log('\\n🔍 Debugging Unmapped Calls (Nov 17, 2025)\\n');
+  console.log('='.repeat(80));
+  console.log('UNMAPPED EXTENSIONS ANALYSIS');
+  console.log('='.repeat(80));
 
-  // Get all calls with no agent_id
-  const { data: unmappedCalls, error } = await supabase
+  const { data: allCalls } = await supabase
     .from('call_logs')
-    .select('id, extension_number, from_number, to_number, direction, call_result')
-    .is('agent_id', null)
-    .gte('started_at', '2025-11-17T00:00:00Z')
-    .lt('started_at', '2025-11-18T00:00:00Z')
-    .limit(30);
+    .select('id, extension_number, agent_id, direction, from_number, to_number, started_at');
 
-  if (error) {
-    console.error('Error:', error);
-    return;
-  }
+  const extensionCounts = {};
+  const unmappedCalls = [];
 
-  console.log(`Found ${unmappedCalls.length} unmapped calls\\n`);
-
-  // Group by extension
-  const byExtension = {};
-  for (const call of unmappedCalls) {
-    const ext = call.extension_number || 'NO_EXT';
-    if (!byExtension[ext]) {
-      byExtension[ext] = [];
-    }
-    byExtension[ext].push(call);
-  }
-
-  console.log('Unmapped calls by extension:\\n');
-  for (const [ext, calls] of Object.entries(byExtension)) {
-    console.log(`Extension ${ext}: ${calls.length} calls`);
-    for (const call of calls.slice(0, 3)) {
-      console.log(`  - ${call.direction} | ${call.call_result} | From: ${call.from_number} | To: ${call.to_number}`);
-    }
-    if (calls.length > 3) {
-      console.log(`  ... and ${calls.length - 3} more`);
-    }
-  }
-
-  // Check specific extensions
-  console.log('\\n📋 Checking problematic extensions:\\n');
-
-  for (const ext of ['108', '102']) {
-    const { data: extCalls, error: extError } = await supabase
-      .from('call_logs')
-      .select('agent_id, extension_number, direction')
-      .eq('extension_number', ext)
-      .gte('started_at', '2025-11-17T00:00:00Z')
-      .lt('started_at', '2025-11-18T00:00:00Z')
-      .limit(5);
-
-    console.log(`Extension ${ext}:`);
-    if (extCalls && extCalls.length > 0) {
-      console.log(`  Found ${extCalls.length} calls`);
-      for (const call of extCalls) {
-        console.log(`  - Agent ID: ${call.agent_id} | Direction: ${call.direction}`);
+  allCalls?.forEach(call => {
+    if (call.extension_number) {
+      if (!extensionCounts[call.extension_number]) {
+        extensionCounts[call.extension_number] = { total: 0, mapped: 0, unmapped: 0 };
       }
-    } else {
-      console.log('  No calls found with this extension');
+      extensionCounts[call.extension_number].total++;
+
+      if (call.agent_id) {
+        extensionCounts[call.extension_number].mapped++;
+      } else {
+        extensionCounts[call.extension_number].unmapped++;
+        unmappedCalls.push(call);
+      }
+    } else if (!call.agent_id) {
+      unmappedCalls.push(call);
     }
+  });
+
+  console.log('\n1. EXTENSION SUMMARY:');
+  console.log(`   Total calls in database: ${allCalls?.length || 0}`);
+  console.log(`   Calls with extension_number: ${Object.keys(extensionCounts).length > 0 ? Object.values(extensionCounts).reduce((sum, c) => sum + c.total, 0) : 0}`);
+  console.log(`   Calls without agent_id (unmapped): ${unmappedCalls.length}`);
+
+  console.log('\n2. EXTENSION COUNTS (sorted by total calls):');
+  const sortedExtensions = Object.entries(extensionCounts)
+    .sort(([, a], [, b]) => b.total - a.total);
+
+  sortedExtensions.forEach(([ext, counts]) => {
+    const inMapping = RINGCENTRAL_EXTENSION_TO_AGENT[ext] ? '✓' : '✗';
+    const status = counts.unmapped > 0 ? `⚠️  ${counts.unmapped} unmapped` : '✓ All mapped';
+    console.log(`   Ext ${ext.padEnd(4)} ${inMapping}  ${counts.total.toString().padStart(4)} calls  -  ${status}`);
+  });
+
+  console.log('\n3. UNMAPPED EXTENSIONS:');
+  const unmappedExtensions = sortedExtensions.filter(([ext]) => !RINGCENTRAL_EXTENSION_TO_AGENT[ext]);
+
+  if (unmappedExtensions.length > 0) {
+    unmappedExtensions.forEach(([ext, counts]) => {
+      console.log(`   Extension ${ext}: ${counts.total} calls not mapped`);
+      const sampleCalls = allCalls?.filter(c => c.extension_number === ext).slice(0, 3);
+      sampleCalls?.forEach(call => {
+        console.log(`     - ${call.direction}: from ${call.from_number || 'unknown'} to ${call.to_number || 'unknown'}`);
+      });
+    });
+  } else {
+    console.log('   ✓ All extensions are mapped!');
   }
 
-  // Check all extensions in database
-  console.log('\\n📊 All extensions in database (Nov 17):\\n');
-  const { data: allExts, error: extError } = await supabase
-    .from('call_logs')
-    .select('extension_number')
-    .gte('started_at', '2025-11-17T00:00:00Z')
-    .lt('started_at', '2025-11-18T00:00:00Z');
+  console.log('\n4. TOP 10 AGENTS BY CALL COUNT:');
+  const { data: agents } = await supabase
+    .from('agents')
+    .select('id, alias_name');
 
-  const extCounts = {};
-  for (const row of allExts || []) {
-    const ext = row.extension_number || 'NO_EXT';
-    extCounts[ext] = (extCounts[ext] || 0) + 1;
-  }
+  const agentMap = {};
+  agents?.forEach(a => { agentMap[a.id] = a.alias_name; });
 
-  const sorted = Object.entries(extCounts).sort((a, b) => b[1] - a[1]);
-  for (const [ext, count] of sorted.slice(0, 20)) {
-    console.log(`  ${ext}: ${count} calls`);
-  }
+  const agentCalls = {};
+  allCalls?.forEach(call => {
+    if (call.agent_id) {
+      if (!agentCalls[call.agent_id]) {
+        agentCalls[call.agent_id] = { total: 0, inbound: 0, outbound: 0 };
+      }
+      agentCalls[call.agent_id].total++;
+      if (call.direction === 'Inbound') {
+        agentCalls[call.agent_id].inbound++;
+      } else {
+        agentCalls[call.agent_id].outbound++;
+      }
+    }
+  });
+
+  Object.entries(agentCalls)
+    .sort(([, a], [, b]) => b.total - a.total)
+    .slice(0, 10)
+    .forEach(([agentId, stats]) => {
+      const name = agentMap[agentId] || `Agent ${agentId}`;
+      console.log(`   ${name.padEnd(15)}: ${stats.total.toString().padStart(3)} calls (${stats.inbound} in / ${stats.outbound} out)`);
+    });
 }
 
 debugUnmappedCalls().catch(console.error);

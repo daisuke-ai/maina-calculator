@@ -17,6 +17,7 @@ export const RINGCENTRAL_EXTENSION_TO_AGENT: Record<string, number> = {
   '111': 17,  // Rameen #A -> Rameen (Ayla)
   '113': 21,  // Laiba #A -> Laiba (Eda)
   '114': 3,   // Eman #A -> Eman (Elif)
+  '116': 2,   // Ayesha #C -> Ayesha (Ada) - ADDED: This extension also belongs to Ayesha
   '117': 28,  // English Issue #C -> Support (English Issue)
   '118': 26,  // Ifaf Shahab -> Ifaf
   '119': 27,  // Shahab Javed -> Shahab
