@@ -337,19 +337,42 @@ export default function AgentDetailPage() {
         {/* Call Performance - All-Time */}
         <div>
           <h2 className="text-2xl md:text-3xl font-extrabold text-foreground mb-6">Call Performance - All-Time</h2>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <Card className="p-6 bg-card border-2 border-blue-500/30 shadow-xl">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <Card className="p-6 bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-2 border-blue-500/30 shadow-xl">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-sm text-muted-foreground">Total Calls</p>
+                <p className="text-sm text-muted-foreground">Calls Made</p>
                 <Phone className="w-5 h-5 text-blue-500 opacity-50" />
               </div>
               <p className="text-3xl font-bold text-foreground">{agent.total_calls || 0}</p>
+              <div className="text-xs text-muted-foreground mt-1">
+                {agent.inbound_calls || 0} in / {agent.outbound_calls || 0} out
+              </div>
             </Card>
 
-            <Card className="p-6 bg-card border-2 border-blue-500/30 shadow-xl">
+            <Card className="p-6 bg-gradient-to-br from-green-500/10 to-green-600/5 border-2 border-green-500/30 shadow-xl">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm text-muted-foreground">Pickup Rate</p>
+                <CheckCircle2 className="w-5 h-5 text-green-500 opacity-50" />
+              </div>
+              <p className="text-3xl font-bold text-green-500">{agent.answer_rate?.toFixed(1) || '0.0'}%</p>
+              <div className="text-xs text-muted-foreground mt-1">
+                {agent.answered_calls || 0} answered
+              </div>
+            </Card>
+
+            <Card className="p-6 bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-2 border-amber-500/30 shadow-xl">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm text-muted-foreground">Avg Duration</p>
+                <Clock className="w-5 h-5 text-amber-500 opacity-50" />
+              </div>
+              <p className="text-3xl font-bold text-foreground">{formatDuration(agent.avg_duration || 0)}</p>
+              <div className="text-xs text-muted-foreground mt-1">per call</div>
+            </Card>
+
+            <Card className="p-6 bg-card border-2 border-border shadow-xl">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-muted-foreground">Inbound</p>
-                <PhoneIncoming className="w-5 h-5 text-blue-500 opacity-50" />
+                <PhoneIncoming className="w-5 h-5 text-accent opacity-50" />
               </div>
               <p className="text-3xl font-bold text-foreground">{agent.inbound_calls || 0}</p>
               <p className="text-xs text-muted-foreground mt-1">
@@ -359,10 +382,10 @@ export default function AgentDetailPage() {
               </p>
             </Card>
 
-            <Card className="p-6 bg-card border-2 border-blue-500/30 shadow-xl">
+            <Card className="p-6 bg-card border-2 border-border shadow-xl">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-muted-foreground">Outbound</p>
-                <PhoneOutgoing className="w-5 h-5 text-blue-500 opacity-50" />
+                <PhoneOutgoing className="w-5 h-5 text-accent opacity-50" />
               </div>
               <p className="text-3xl font-bold text-foreground">{agent.outbound_calls || 0}</p>
               <p className="text-xs text-muted-foreground mt-1">
@@ -372,26 +395,15 @@ export default function AgentDetailPage() {
               </p>
             </Card>
 
-            <Card className="p-6 bg-card border-2 border-blue-500/30 shadow-xl">
+            <Card className="p-6 bg-card border-2 border-border shadow-xl">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-sm text-muted-foreground">Answered</p>
-                <CheckCircle2 className="w-5 h-5 text-blue-500 opacity-50" />
+                <p className="text-sm text-muted-foreground">Total Time</p>
+                <Zap className="w-5 h-5 text-accent opacity-50" />
               </div>
-              <p className="text-3xl font-bold text-foreground">{agent.answered_calls || 0}</p>
-              <p className="text-xs text-blue-500 font-medium mt-1">
-                {agent.answer_rate?.toFixed(1) || '0.0'}% answer rate
+              <p className="text-2xl font-bold text-foreground">
+                {Math.floor((agent.total_duration || 0) / 3600)}h {Math.floor(((agent.total_duration || 0) % 3600) / 60)}m
               </p>
-            </Card>
-
-            <Card className="p-6 bg-card border-2 border-blue-500/30 shadow-xl">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm text-muted-foreground">Avg Duration</p>
-                <Clock className="w-5 h-5 text-blue-500 opacity-50" />
-              </div>
-              <p className="text-3xl font-bold text-foreground">{formatDuration(agent.avg_duration || 0)}</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Total: {Math.floor((agent.total_duration || 0) / 3600)}h {Math.floor(((agent.total_duration || 0) % 3600) / 60)}m
-              </p>
+              <p className="text-xs text-muted-foreground mt-1">on calls</p>
             </Card>
           </div>
         </div>
@@ -399,32 +411,65 @@ export default function AgentDetailPage() {
         {/* Call Activity - Last 30 Days */}
         <div>
           <h2 className="text-2xl md:text-3xl font-extrabold text-foreground mb-6">Call Activity - Last 30 Days</h2>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <Card className="p-6 bg-card border-2 border-border shadow-xl">
-              <p className="text-sm text-muted-foreground mb-2">Total Calls</p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm text-muted-foreground">Calls Made</p>
+                <Phone className="w-4 h-4 text-muted-foreground opacity-50" />
+              </div>
               <p className="text-2xl font-bold text-foreground">{agent.calls_30d || 0}</p>
+              <div className="text-xs text-muted-foreground mt-1">last 30 days</div>
             </Card>
 
             <Card className="p-6 bg-card border-2 border-border shadow-xl">
-              <p className="text-sm text-muted-foreground mb-2">Inbound</p>
-              <p className="text-2xl font-bold text-foreground">{agent.inbound_calls_30d || 0}</p>
-            </Card>
-
-            <Card className="p-6 bg-card border-2 border-border shadow-xl">
-              <p className="text-sm text-muted-foreground mb-2">Outbound</p>
-              <p className="text-2xl font-bold text-foreground">{agent.outbound_calls_30d || 0}</p>
-            </Card>
-
-            <Card className="p-6 bg-card border-2 border-border shadow-xl">
-              <p className="text-sm text-muted-foreground mb-2">Answered Rate</p>
-              <p className="text-2xl font-bold text-blue-500">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm text-muted-foreground">Pickup Rate</p>
+                <CheckCircle2 className="w-4 h-4 text-accent opacity-50" />
+              </div>
+              <p className="text-2xl font-bold text-accent">
                 {(agent.answer_rate_30d || 0).toFixed(1)}%
               </p>
+              <div className="text-xs text-muted-foreground mt-1">
+                {agent.answered_calls_30d || 0} answered
+              </div>
             </Card>
 
             <Card className="p-6 bg-card border-2 border-border shadow-xl">
-              <p className="text-sm text-muted-foreground mb-2">Avg Duration</p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm text-muted-foreground">Avg Duration</p>
+                <Clock className="w-4 h-4 text-muted-foreground opacity-50" />
+              </div>
               <p className="text-2xl font-bold text-foreground">{formatDuration(agent.avg_duration_30d || 0)}</p>
+              <div className="text-xs text-muted-foreground mt-1">per call</div>
+            </Card>
+
+            <Card className="p-6 bg-card border-2 border-border shadow-xl">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm text-muted-foreground">Inbound</p>
+                <PhoneIncoming className="w-4 h-4 text-muted-foreground opacity-50" />
+              </div>
+              <p className="text-2xl font-bold text-foreground">{agent.inbound_calls_30d || 0}</p>
+              <p className="text-xs text-muted-foreground mt-1">received</p>
+            </Card>
+
+            <Card className="p-6 bg-card border-2 border-border shadow-xl">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm text-muted-foreground">Outbound</p>
+                <PhoneOutgoing className="w-4 h-4 text-muted-foreground opacity-50" />
+              </div>
+              <p className="text-2xl font-bold text-foreground">{agent.outbound_calls_30d || 0}</p>
+              <p className="text-xs text-muted-foreground mt-1">dialed</p>
+            </Card>
+
+            <Card className="p-6 bg-card border-2 border-border shadow-xl">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm text-muted-foreground">Total Time</p>
+                <Zap className="w-4 h-4 text-muted-foreground opacity-50" />
+              </div>
+              <p className="text-xl font-bold text-foreground">
+                {Math.floor((agent.total_duration_30d || 0) / 3600)}h {Math.floor(((agent.total_duration_30d || 0) % 3600) / 60)}m
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">on calls</p>
             </Card>
           </div>
         </div>
