@@ -450,7 +450,7 @@ export function ResultsTable({
                   let description = ''
 
                   if (offer.offer_type.includes('Owner')) {
-                    description = '10% below list'
+                    description = '10% above list'
                   } else if (offer.offer_type.includes('Balanced')) {
                     description = 'Average price'
                   } else {
