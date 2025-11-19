@@ -233,8 +233,8 @@ export async function POST(request: NextRequest) {
     const transformedRecords = allRecords.map(transformCallRecord);
 
     // Count accuracy metrics
-    const withExtension = transformedRecords.filter(r => r.extension_number).length;
-    const withAgentId = transformedRecords.filter(r => r.agent_id !== null).length;
+    const withExtension = transformedRecords.filter((r: any) => r.extension_number).length;
+    const withAgentId = transformedRecords.filter((r: any) => r.agent_id !== null).length;
     const accuracyPercent = transformedRecords.length > 0
       ? ((withAgentId / transformedRecords.length) * 100).toFixed(1)
       : '0.0';
@@ -245,7 +245,7 @@ export async function POST(request: NextRequest) {
     // Filter to only accurate (mapped) calls if requested
     const onlyAccurate = body.onlyAccurate === true;
     const recordsToSync = onlyAccurate
-      ? transformedRecords.filter(r => r.agent_id !== null)
+      ? transformedRecords.filter((r: any) => r.agent_id !== null)
       : transformedRecords;
 
     if (onlyAccurate && recordsToSync.length < transformedRecords.length) {
