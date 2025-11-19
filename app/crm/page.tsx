@@ -25,7 +25,13 @@ import {
   Clock,
   RefreshCw,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Activity,
+  Target,
+  Award,
+  Zap,
+  ArrowRight,
+  ChevronRight
 } from 'lucide-react'
 import { downloadAgentsCSV, downloadAgentsPDF } from '@/lib/export-reports'
 
@@ -104,98 +110,67 @@ export default function CRMDashboard() {
     }
   }
 
-  const fetchPipelineSummary = async (range: TimeRange = timeRange) => {
+  const fetchPipelineSummary = async (range: TimeRange) => {
     try {
-      // Map time range to days for API call
-      const daysBackMap: Record<TimeRange, number> = {
-        'week': 7,
-        'month': 30,
-        'quarter': 90,
-        'year': 365,
-        'all': 999999,
-      }
-
-      const daysBack = daysBackMap[range] || 30
-
+      const daysBack = range === 'week' ? 7 : range === 'month' ? 30 : range === 'quarter' ? 90 : range === 'year' ? 365 : 9999
       const response = await fetch(`/api/crm/pipeline/analytics/summary?days_back=${daysBack}`)
       const result = await response.json()
 
-      if (response.ok && result.summary) {
-        // Show time-range metrics when not viewing all-time
-        const metricsToShow = range === 'all' ? result.summary.allTime : result.summary.timeRange
-        setPipelineSummary({
-          ...metricsToShow,
-          _timeRange: range,
-        })
+      if (response.ok && result.pipeline_summary) {
+        setPipelineSummary(result.pipeline_summary)
       }
     } catch (err: any) {
       console.error('Failed to fetch pipeline summary:', err)
     }
   }
 
-  const timeRangeOptions: { value: TimeRange; label: string }[] = [
-    { value: 'week', label: 'Last Week' },
-    { value: 'month', label: 'Last Month' },
-    { value: 'quarter', label: 'Last Quarter' },
-    { value: 'year', label: 'Last Year' },
-    { value: 'all', label: 'All Time' },
+  const timeRangeOptions: { value: TimeRange; label: string; icon?: any }[] = [
+    { value: 'week', label: '7 Days' },
+    { value: 'month', label: '30 Days' },
+    { value: 'quarter', label: '3 Months' },
+    { value: 'year', label: '12 Months' },
+    { value: 'all', label: 'All Time' }
   ]
-
-  // Filter and sort agents
-  // Helper function to get the right field based on time range
-  const getEmailSentField = () => timeRange === 'all' ? 'total_sent' : 'emails_sent_30d'
-  const getEmailRepliedField = () => timeRange === 'all' ? 'total_replied' : 'emails_replied_30d'
-  const getReplyRateField = () => timeRange === 'all' ? 'reply_rate' : 'reply_rate_30d'
-  const getCallsField = () => timeRange === 'all' ? 'total_calls' : 'calls_30d'
-  const getAnsweredCallsField = () => timeRange === 'all' ? 'answered_calls' : 'answered_calls_30d'
-  const getDurationField = () => timeRange === 'all' ? 'total_duration' : 'total_duration_30d'
-  const getAnswerRateField = () => timeRange === 'all' ? 'answer_rate' : 'answer_rate_30d'
 
   const filteredAgents = agents
     .filter(agent => {
-      const searchLower = searchTerm.toLowerCase()
-      return (
-        agent.aliasName.toLowerCase().includes(searchLower) ||
-        agent.realName.toLowerCase().includes(searchLower) ||
-        agent.email.toLowerCase().includes(searchLower)
-      )
+      const search = searchTerm.toLowerCase()
+      return agent.aliasName.toLowerCase().includes(search) ||
+        agent.email.toLowerCase().includes(search) ||
+        agent.realName.toLowerCase().includes(search)
     })
     .sort((a, b) => {
-      let aVal, bVal
-
-      switch (sortBy) {
-        case 'name':
-          aVal = a.aliasName
-          bVal = b.aliasName
-          break
-        case 'sent':
-          // Use dynamic field based on time range
-          aVal = a[getEmailSentField() as keyof typeof a] || 0
-          bVal = b[getEmailSentField() as keyof typeof b] || 0
-          break
-        case 'reply_rate':
-          // Use dynamic field based on time range
-          aVal = a[getReplyRateField() as keyof typeof a] || 0
-          bVal = b[getReplyRateField() as keyof typeof b] || 0
-          break
-        default:
-          return 0
+      let comparison = 0
+      if (sortBy === 'name') {
+        comparison = a.aliasName.localeCompare(b.aliasName)
+      } else if (sortBy === 'sent') {
+        const aVal = timeRange === 'month' ? a.emails_sent_30d : a.total_sent
+        const bVal = timeRange === 'month' ? b.emails_sent_30d : b.total_sent
+        comparison = (aVal || 0) - (bVal || 0)
+      } else if (sortBy === 'reply_rate') {
+        const aVal = timeRange === 'month' ? a.reply_rate_30d : a.reply_rate
+        const bVal = timeRange === 'month' ? b.reply_rate_30d : b.reply_rate
+        comparison = (aVal || 0) - (bVal || 0)
       }
-
-      if (typeof aVal === 'string') {
-        return sortOrder === 'asc'
-          ? aVal.localeCompare(bVal as string)
-          : (bVal as string).localeCompare(aVal)
-      } else {
-        return sortOrder === 'asc' ? aVal - (bVal as number) : (bVal as number) - aVal
-      }
+      return sortOrder === 'asc' ? comparison : -comparison
     })
 
-  // Calculate summary stats - Emails (using time-range aware fields)
+  // Determine which fields to use based on time range
+  const getEmailSentField = () => timeRange === 'month' ? 'emails_sent_30d' : 'total_sent'
+  const getEmailRepliedField = () => timeRange === 'month' ? 'emails_replied_30d' : 'total_replied'
+  const getReplyRateField = () => timeRange === 'month' ? 'reply_rate_30d' : 'reply_rate'
+
+  const getCallsField = () => timeRange === 'month' ? 'calls_30d' : 'total_calls'
+  const getAnsweredCallsField = () => timeRange === 'month' ? 'answered_calls_30d' : 'answered_calls'
+  const getDurationField = () => timeRange === 'month' ? 'total_duration_30d' : 'total_duration'
+  const getAnswerRateField = () => timeRange === 'month' ? 'answer_rate_30d' : 'answer_rate'
+
+  // Get field names based on current time range
   const emailSentField = getEmailSentField() as keyof AgentStats
   const emailRepliedField = getEmailRepliedField() as keyof AgentStats
   const replyRateField = getReplyRateField() as keyof AgentStats
 
+  // Calculate summary stats - Emails
   const totalSent = agents.reduce((sum, a) => sum + (a[emailSentField] as number || 0), 0)
   const totalReplied = agents.reduce((sum, a) => sum + (a[emailRepliedField] as number || 0), 0)
   const avgReplyRate = agents.length > 0
@@ -251,10 +226,13 @@ export default function CRMDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen py-12 px-4 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading CRM data...</p>
+          <div className="relative">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-accent mx-auto"></div>
+            <div className="absolute inset-0 animate-spin rounded-full h-16 w-16 border-t-2 border-accent/30 mx-auto" style={{ animationDirection: 'reverse' }}></div>
+          </div>
+          <p className="text-muted-foreground mt-6 text-lg">Loading CRM data...</p>
         </div>
       </div>
     )
@@ -262,10 +240,22 @@ export default function CRMDashboard() {
 
   if (error) {
     return (
-      <div className="min-h-screen py-12 px-4">
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 py-12 px-4">
         <div className="container mx-auto max-w-7xl">
-          <Card className="p-6 bg-destructive/10 border-l-4 border-destructive">
-            <p className="text-destructive font-semibold">Error: {error}</p>
+          <Card className="p-8 bg-destructive/5 backdrop-blur border-2 border-destructive/20">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-6 h-6 text-destructive mt-0.5" />
+              <div>
+                <p className="text-destructive font-semibold text-lg">Error Loading Dashboard</p>
+                <p className="text-muted-foreground mt-1">{error}</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="mt-4 px-4 py-2 bg-destructive/10 hover:bg-destructive/20 text-destructive border border-destructive/30 rounded-lg font-medium transition-all"
+                >
+                  Retry
+                </button>
+              </div>
+            </div>
           </Card>
         </div>
       </div>
@@ -273,155 +263,128 @@ export default function CRMDashboard() {
   }
 
   return (
-    <main className="min-h-screen py-12 px-4">
-      <div className="container mx-auto max-w-7xl space-y-8">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-muted shadow-lg mb-4">
-              <Users className="w-8 h-8 text-accent" />
+    <main className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+      {/* Modern Header Section */}
+      <div className="bg-gradient-to-r from-accent/10 via-accent/5 to-transparent border-b border-border/50">
+        <div className="container mx-auto max-w-7xl px-4 py-8">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+            {/* Title Section */}
+            <div className="space-y-1">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-accent to-accent/60 flex items-center justify-center shadow-xl">
+                  <Users className="w-6 h-6 text-accent-foreground" />
+                </div>
+                <h1 className="text-4xl font-extrabold text-foreground tracking-tight">CRM Dashboard</h1>
+              </div>
+              <p className="text-muted-foreground text-lg pl-15">Track team performance and communication metrics</p>
             </div>
-            <h1 className="text-4xl md:text-5xl font-extrabold text-foreground mb-2">CRM Dashboard</h1>
-            <p className="text-lg text-muted-foreground">Track agent performance and email analytics</p>
+
+            {/* Navigation Buttons */}
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Quick Actions */}
+              <div className="flex items-center gap-2 p-1 bg-muted/50 rounded-xl">
+                <Link href="/crm/analytics">
+                  <button className="flex items-center gap-2 px-4 py-2.5 hover:bg-background rounded-lg font-medium transition-all group">
+                    <BarChart3 className="w-4 h-4 text-accent group-hover:scale-110 transition-transform" />
+                    <span>Analytics</span>
+                    <ChevronRight className="w-3 h-3 opacity-50" />
+                  </button>
+                </Link>
+                <Link href="/crm/pipeline">
+                  <button className="flex items-center gap-2 px-4 py-2.5 hover:bg-background rounded-lg font-medium transition-all group">
+                    <LayoutDashboard className="w-4 h-4 text-accent group-hover:scale-110 transition-transform" />
+                    <span>Pipeline</span>
+                    <ChevronRight className="w-3 h-3 opacity-50" />
+                  </button>
+                </Link>
+              </div>
+
+              {/* Export Actions */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => downloadAgentsCSV(agents, timeRange)}
+                  disabled={loading || agents.length === 0}
+                  className="p-2.5 hover:bg-muted rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
+                  title="Export CSV"
+                >
+                  <FileText className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                </button>
+                <button
+                  onClick={() => downloadAgentsPDF(agents, timeRange)}
+                  disabled={loading || agents.length === 0}
+                  className="p-2.5 hover:bg-muted rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
+                  title="Export PDF"
+                >
+                  <Download className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                </button>
+              </div>
+
+              {/* Calculator Link */}
+              <Link href="/">
+                <button className="flex items-center gap-2 px-5 py-2.5 bg-background hover:bg-muted border-2 border-border rounded-xl font-medium transition-all shadow-sm hover:shadow-lg group">
+                  <ExternalLink className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                  Calculator
+                </button>
+              </Link>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-3">
-            <Link href="/">
-              <button className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-xl font-medium transition-all shadow-lg border-2 border-border">
-                <ExternalLink className="w-4 h-4" />
-                Calculator
-              </button>
-            </Link>
-            <Link href="/crm/analytics">
-              <button className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl font-medium transition-all shadow-lg">
-                <BarChart3 className="w-4 h-4" />
-                Analytics
-              </button>
-            </Link>
-            <Link href="/crm/pipeline">
-              <button className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl font-medium transition-all shadow-lg">
-                <LayoutDashboard className="w-4 h-4" />
-                Pipeline
-              </button>
-            </Link>
+        </div>
+      </div>
 
-
-            {/* Export Buttons */}
-            <div className="flex gap-2">
+      <div className="container mx-auto max-w-7xl px-4 py-8 space-y-8">
+        {/* Time Range Pills */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 p-1.5 bg-muted/50 rounded-2xl backdrop-blur">
+            {timeRangeOptions.map((option) => (
               <button
-                onClick={() => downloadAgentsCSV(agents, timeRange)}
-                disabled={loading || agents.length === 0}
-                className="flex items-center gap-2 px-4 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-xl font-medium transition-all shadow-lg border-2 border-border disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Download CSV Report"
+                key={option.value}
+                onClick={() => setTimeRange(option.value)}
+                disabled={loading}
+                className={`
+                  relative px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-300
+                  ${timeRange === option.value
+                    ? 'bg-background text-foreground shadow-lg scale-105'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                  }
+                  ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                `}
               >
-                <FileText className="w-4 h-4" />
-                CSV
+                {timeRange === option.value && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-accent/20 to-accent/10 rounded-xl" />
+                )}
+                <span className="relative">{option.label}</span>
               </button>
-              <button
-                onClick={() => downloadAgentsPDF(agents, timeRange)}
-                disabled={loading || agents.length === 0}
-                className="flex items-center gap-2 px-4 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-xl font-medium transition-all shadow-lg border-2 border-border disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Download PDF Report"
-              >
-                <Download className="w-4 h-4" />
-                PDF
-              </button>
-            </div>
+            ))}
           </div>
+
+          <button
+            onClick={fetchAgents}
+            disabled={loading}
+            className="flex items-center gap-2 px-5 py-2.5 bg-background hover:bg-muted border border-border rounded-xl font-medium transition-all shadow-sm hover:shadow-lg group disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 group-hover:rotate-180 transition-transform duration-500 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
         </div>
 
-
-        {/* Data Range Indicator */}
-        <div className="flex items-center justify-between px-4 py-2 bg-accent/10 border-l-4 border-accent rounded-lg">
-          <p className="text-sm font-medium text-foreground">
-            Showing data for: <span className="text-accent font-semibold">{timeRangeOptions.find(o => o.value === timeRange)?.label || 'All Time'}</span>
-          </p>
-        </div>
-
-        {/* Email Summary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="p-6 bg-card border-2 border-border shadow-xl">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Total Emails Sent</p>
-                <p className="text-3xl font-bold text-foreground">{totalSent.toLocaleString()}</p>
-              </div>
-              <Mail className="w-10 h-10 text-accent opacity-30" />
-            </div>
-          </Card>
-
-          <Card className="p-6 bg-card border-2 border-border shadow-xl">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Total Replies</p>
-                <p className="text-3xl font-bold text-foreground">{totalReplied}</p>
-              </div>
-              <MessageSquare className="w-10 h-10 text-accent opacity-30" />
-            </div>
-          </Card>
-
-          <Card className="p-6 bg-card border-2 border-border shadow-xl">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Avg Reply Rate</p>
-                <p className="text-3xl font-bold text-accent">{avgReplyRate}%</p>
-              </div>
-              <TrendingUp className="w-10 h-10 text-accent opacity-30" />
-            </div>
-          </Card>
-        </div>
-
-        {/* Call Summary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="p-6 bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-2 border-blue-500/30 shadow-xl">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Total Calls</p>
-                <p className="text-3xl font-bold text-foreground">{totalCalls.toLocaleString()}</p>
-              </div>
-              <Phone className="w-10 h-10 text-blue-500 opacity-40" />
-            </div>
-          </Card>
-
-          <Card className="p-6 bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-2 border-blue-500/30 shadow-xl">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Calls Answered</p>
-                <p className="text-3xl font-bold text-foreground">{totalAnswered.toLocaleString()}</p>
-              </div>
-              <PhoneIncoming className="w-10 h-10 text-blue-500 opacity-40" />
-            </div>
-          </Card>
-
-          <Card className="p-6 bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-2 border-blue-500/30 shadow-xl">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Avg Answer Rate</p>
-                <p className="text-3xl font-bold text-blue-500">{avgAnswerRate}%</p>
-              </div>
-              <TrendingUp className="w-10 h-10 text-blue-500 opacity-40" />
-            </div>
-          </Card>
-
-          <Card className="p-6 bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-2 border-blue-500/30 shadow-xl">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Avg Call Duration</p>
-                <p className="text-3xl font-bold text-foreground">{formatDuration(avgCallDuration)}</p>
-                <p className="text-xs text-muted-foreground mt-1">min:sec</p>
-              </div>
-              <Clock className="w-10 h-10 text-blue-500 opacity-40" />
-            </div>
-          </Card>
-        </div>
-
-        {/* Pipeline Summary Stats */}
-        {pipelineSummary && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="p-6 bg-gradient-to-br from-green-500/10 to-green-600/5 border-2 border-green-500/30 shadow-xl">
-              <div className="flex items-center justify-between">
+        {/* Key Metrics Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+          {/* Active Pipeline Card */}
+          {pipelineSummary && (
+            <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-500/10 via-green-500/5 to-transparent border-emerald-500/20 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-500/20 to-transparent rounded-full blur-3xl" />
+              <div className="p-6 relative">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="p-3 bg-emerald-500/10 rounded-xl">
+                    <Target className="w-6 h-6 text-emerald-500" />
+                  </div>
+                  <span className="text-xs font-medium text-emerald-600 bg-emerald-500/10 px-2 py-1 rounded-full">
+                    {((pipelineSummary.overall_conversion_rate as number) || 0).toFixed(1)}% Conv.
+                  </span>
+                </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Active Pipeline</p>
-                  <p className="text-3xl font-bold text-foreground">
+                  <p className="text-3xl font-bold text-foreground mb-1">
                     {new Intl.NumberFormat('en-US', {
                       style: 'currency',
                       currency: 'USD',
@@ -429,178 +392,209 @@ export default function CRMDashboard() {
                       maximumFractionDigits: 0,
                     }).format((pipelineSummary.active_pipeline_value as number) || 0)}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {(pipelineSummary.total_active_deals as number) || 0} deals in pipeline
-                  </p>
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Activity className="w-3 h-3" />
+                    <span>{(pipelineSummary.total_active_deals as number) || 0} active deals</span>
+                  </div>
                 </div>
-                <LayoutDashboard className="w-10 h-10 text-green-500 opacity-40" />
               </div>
             </Card>
+          )}
 
-            <Card className="p-6 bg-gradient-to-br from-green-500/10 to-green-600/5 border-2 border-green-500/30 shadow-xl">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Active Deals</p>
-                  <p className="text-3xl font-bold text-foreground">{(pipelineSummary.total_active_deals as number) || 0}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {timeRange === 'all' ? 'All-time' : `${timeRangeOptions.find(o => o.value === timeRange)?.label || 'Recent'}`}
-                  </p>
+          {/* Email Performance Card */}
+          <Card className="relative overflow-hidden bg-gradient-to-br from-blue-500/10 via-indigo-500/5 to-transparent border-blue-500/20 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/20 to-transparent rounded-full blur-3xl" />
+            <div className="p-6 relative">
+              <div className="flex items-start justify-between mb-4">
+                <div className="p-3 bg-blue-500/10 rounded-xl">
+                  <Mail className="w-6 h-6 text-blue-500" />
                 </div>
-                <TrendingUp className="w-10 h-10 text-green-500 opacity-40" />
+                <span className="text-xs font-medium text-blue-600 bg-blue-500/10 px-2 py-1 rounded-full">
+                  {avgReplyRate}% Reply
+                </span>
               </div>
-            </Card>
-
-            <Card className="p-6 bg-gradient-to-br from-green-500/10 to-green-600/5 border-2 border-green-500/30 shadow-xl">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Conversion Rate</p>
-                  <p className="text-3xl font-bold text-green-500">{((pipelineSummary.overall_conversion_rate as number) || 0).toFixed(1)}%</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {timeRange === 'all' ? 'All-time' : `${timeRangeOptions.find(o => o.value === timeRange)?.label || 'Recent'}`}
-                  </p>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Email Outreach</p>
+                <p className="text-3xl font-bold text-foreground mb-1">{totalSent.toLocaleString()}</p>
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <MessageSquare className="w-3 h-3" />
+                    {totalReplied} replies
+                  </span>
                 </div>
-                <BarChart3 className="w-10 h-10 text-green-500 opacity-40" />
               </div>
-            </Card>
-          </div>
-        )}
-
-        {/* Time Range Selector */}
-        <Card className="p-4 bg-card border-2 border-border shadow-xl">
-          <div className="flex flex-wrap items-center gap-2">
-            <Calendar className="w-5 h-5 text-accent" />
-            <span className="text-sm font-medium text-muted-foreground mr-2">Time Range:</span>
-            {timeRangeOptions.map((option) => (
-              <button
-                key={option.value}
-                onClick={() => setTimeRange(option.value)}
-                disabled={loading}
-                className={`
-                  px-4 py-2 rounded-lg text-sm font-medium transition-all
-                  ${timeRange === option.value
-                    ? 'bg-accent text-accent-foreground shadow-md'
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                  }
-                  ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-                `}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </Card>
-
-        {/* Search and Filters */}
-        <Card className="p-6 bg-card border-2 border-border shadow-xl">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Search agents by name or email..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 h-11 bg-input border-border text-foreground"
-              />
             </div>
-            <button
-              onClick={fetchAgents}
-              className="px-6 py-2.5 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg font-medium transition-all border-2 border-border whitespace-nowrap"
-            >
-              Refresh Data
-            </button>
-          </div>
-        </Card>
+          </Card>
 
-        {/* Agents Table */}
-        <Card className="bg-card border-2 border-border shadow-xl overflow-hidden">
+          {/* Call Performance Card */}
+          <Card className="relative overflow-hidden bg-gradient-to-br from-purple-500/10 via-pink-500/5 to-transparent border-purple-500/20 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-500/20 to-transparent rounded-full blur-3xl" />
+            <div className="p-6 relative">
+              <div className="flex items-start justify-between mb-4">
+                <div className="p-3 bg-purple-500/10 rounded-xl">
+                  <Phone className="w-6 h-6 text-purple-500" />
+                </div>
+                <span className="text-xs font-medium text-purple-600 bg-purple-500/10 px-2 py-1 rounded-full">
+                  {avgAnswerRate}% Answer
+                </span>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Call Activity</p>
+                <p className="text-3xl font-bold text-foreground mb-1">{totalCalls.toLocaleString()}</p>
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    {formatDuration(avgCallDuration)} avg
+                  </span>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Team Performance Card */}
+          <Card className="relative overflow-hidden bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-transparent border-amber-500/20 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-500/20 to-transparent rounded-full blur-3xl" />
+            <div className="p-6 relative">
+              <div className="flex items-start justify-between mb-4">
+                <div className="p-3 bg-amber-500/10 rounded-xl">
+                  <Award className="w-6 h-6 text-amber-500" />
+                </div>
+                <span className="text-xs font-medium text-amber-600 bg-amber-500/10 px-2 py-1 rounded-full">
+                  {timeRange === 'month' ? '30 Days' : timeRangeOptions.find(o => o.value === timeRange)?.label}
+                </span>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Active Agents</p>
+                <p className="text-3xl font-bold text-foreground mb-1">{agents.length}</p>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Zap className="w-3 h-3" />
+                  <span>Team members tracked</span>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Search agents by name or email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-12 h-12 bg-background/50 backdrop-blur border-2 border-border/50 text-foreground text-base rounded-xl focus:border-accent/50 transition-all shadow-sm"
+          />
+        </div>
+
+        {/* Agents Table - Modern Design */}
+        <Card className="bg-background/50 backdrop-blur border border-border/50 shadow-2xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-muted border-b-2 border-border">
+              <thead className="bg-gradient-to-r from-muted/80 to-muted/60 border-b border-border/50">
                 <tr>
-                  <th className="px-6 py-4 text-left">
+                  <th className="px-6 py-5 text-left">
                     <button
                       onClick={() => toggleSort('name')}
-                      className="flex items-center gap-2 font-semibold text-sm text-foreground hover:text-accent transition-colors"
+                      className="flex items-center gap-2 font-semibold text-sm text-foreground hover:text-accent transition-colors group"
                     >
-                      Agent
-                      <ArrowUpDown className="w-4 h-4" />
+                      <span>Agent</span>
+                      <ArrowUpDown className="w-3.5 h-3.5 opacity-50 group-hover:opacity-100" />
                     </button>
                   </th>
-                  <th className="px-6 py-4 text-center">
+                  <th className="px-6 py-5 text-center">
                     <button
                       onClick={() => toggleSort('sent')}
-                      className="flex items-center gap-2 font-semibold text-sm text-foreground hover:text-accent transition-colors mx-auto"
+                      className="flex items-center gap-2 font-semibold text-sm text-foreground hover:text-accent transition-colors mx-auto group"
                     >
-                      Emails Sent
-                      <ArrowUpDown className="w-4 h-4" />
+                      <span>Emails</span>
+                      <ArrowUpDown className="w-3.5 h-3.5 opacity-50 group-hover:opacity-100" />
                     </button>
                   </th>
-                  <th className="px-6 py-4 text-center font-semibold text-sm text-foreground">Replies</th>
-                  <th className="px-6 py-4 text-center">
+                  <th className="px-6 py-5 text-center font-semibold text-sm text-foreground">
+                    <span className="flex items-center gap-2 justify-center">
+                      <MessageSquare className="w-3.5 h-3.5 opacity-50" />
+                      Replies
+                    </span>
+                  </th>
+                  <th className="px-6 py-5 text-center">
                     <button
                       onClick={() => toggleSort('reply_rate')}
-                      className="flex items-center gap-2 font-semibold text-sm text-foreground hover:text-accent transition-colors mx-auto"
+                      className="flex items-center gap-2 font-semibold text-sm text-foreground hover:text-accent transition-colors mx-auto group"
                     >
-                      Reply Rate
-                      <ArrowUpDown className="w-4 h-4" />
+                      <span>Reply Rate</span>
+                      <ArrowUpDown className="w-3.5 h-3.5 opacity-50 group-hover:opacity-100" />
                     </button>
                   </th>
-                  <th className="px-6 py-4 text-center font-semibold text-sm text-foreground">Total Calls</th>
-                  <th className="px-6 py-4 text-center font-semibold text-sm text-foreground">Answer Rate</th>
-                  <th className="px-6 py-4 text-center font-semibold text-sm text-foreground">Last Active</th>
-                  <th className="px-6 py-4 text-center font-semibold text-sm text-foreground">Actions</th>
+                  <th className="px-6 py-5 text-center font-semibold text-sm text-foreground">
+                    <span className="flex items-center gap-2 justify-center">
+                      <Phone className="w-3.5 h-3.5 opacity-50" />
+                      Calls
+                    </span>
+                  </th>
+                  <th className="px-6 py-5 text-center font-semibold text-sm text-foreground">Answer Rate</th>
+                  <th className="px-6 py-5 text-center font-semibold text-sm text-foreground">Last Active</th>
+                  <th className="px-6 py-5 text-center font-semibold text-sm text-foreground">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody className="divide-y divide-border/30">
                 {filteredAgents.map((agent, index) => (
-                  <tr key={agent.id} className="hover:bg-muted/50 transition-colors">
-                    <td className="px-6 py-4">
+                  <tr key={agent.id} className="hover:bg-muted/30 transition-all duration-200 group">
+                    <td className="px-6 py-5">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center text-accent font-semibold">
-                          {agent.aliasName.charAt(0)}
+                        <div className="relative">
+                          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-accent/20 to-accent/10 flex items-center justify-center text-accent font-semibold text-lg shadow-sm group-hover:shadow-lg transition-all">
+                            {agent.aliasName.charAt(0)}
+                          </div>
+                          {agent.last_email_sent && (
+                            <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-background"></div>
+                          )}
                         </div>
                         <div>
-                          <p className="font-medium text-foreground">{agent.aliasName}</p>
+                          <p className="font-semibold text-foreground">{agent.aliasName}</p>
                           <p className="text-sm text-muted-foreground">{agent.email}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-center font-medium text-foreground">
-                      {(agent[emailSentField] as number) || 0}
+                    <td className="px-6 py-5">
+                      <div className="text-center">
+                        <p className="font-semibold text-lg text-foreground">{(agent[emailSentField] as number) || 0}</p>
+                        <p className="text-xs text-muted-foreground">sent</p>
+                      </div>
                     </td>
-                    <td className="px-6 py-4 text-center font-medium text-foreground">
-                      {(agent[emailRepliedField] as number) || 0}
+                    <td className="px-6 py-5">
+                      <div className="text-center">
+                        <p className="font-semibold text-lg text-foreground">{(agent[emailRepliedField] as number) || 0}</p>
+                        <p className="text-xs text-muted-foreground">received</p>
+                      </div>
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-accent/20 text-accent border border-accent/30">
+                    <td className="px-6 py-5 text-center">
+                      <div className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-gradient-to-r from-blue-500/20 to-indigo-500/20 text-blue-600 border border-blue-500/30">
                         {((agent[replyRateField] as number) || 0).toFixed(1)}%
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="text-sm">
-                        <div className="flex items-center justify-center gap-1">
-                          <Phone className="w-3 h-3 text-blue-500" />
-                          <span className="font-medium text-foreground">{(agent[callsField] as number) || 0}</span>
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-1">
-                          {(agent[answeredCallsField] as number) || 0} answered
-                        </div>
+                    <td className="px-6 py-5">
+                      <div className="text-center">
+                        <p className="font-semibold text-lg text-foreground">{(agent[callsField] as number) || 0}</p>
+                        <p className="text-xs text-muted-foreground">{(agent[answeredCallsField] as number) || 0} answered</p>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-500/20 text-blue-500 border border-blue-500/30">
+                    <td className="px-6 py-5 text-center">
+                      <div className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-600 border border-purple-500/30">
                         {((agent[answerRateField] as number) || 0).toFixed(1)}%
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-center text-sm text-muted-foreground">
-                      {formatDate(agent.last_email_sent)}
+                    <td className="px-6 py-5">
+                      <div className="text-center">
+                        <p className="text-sm text-muted-foreground">{formatDate(agent.last_email_sent)}</p>
+                      </div>
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-6 py-5 text-center">
                       <Link href={`/crm/agents/${agent.id}`}>
-                        <button className="inline-flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg text-sm font-medium transition-all border border-border">
-                          <Eye className="w-4 h-4" />
+                        <button className="inline-flex items-center gap-2 px-4 py-2 bg-background hover:bg-muted border border-border rounded-lg text-sm font-medium transition-all shadow-sm hover:shadow-lg group">
+                          <Eye className="w-3.5 h-3.5 opacity-70 group-hover:opacity-100" />
                           View
+                          <ArrowRight className="w-3 h-3 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
                         </button>
                       </Link>
                     </td>
@@ -611,11 +605,10 @@ export default function CRMDashboard() {
           </div>
 
           {filteredAgents.length === 0 && (
-            <div className="text-center py-16">
+            <div className="text-center py-16 px-4">
               <Users className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-20" />
-              <p className="text-lg text-muted-foreground">
-                {searchTerm ? 'No agents found matching your search' : 'No agents available'}
-              </p>
+              <p className="text-lg font-medium text-muted-foreground mb-2">No agents found</p>
+              <p className="text-sm text-muted-foreground">Try adjusting your search or filters</p>
             </div>
           )}
         </Card>
