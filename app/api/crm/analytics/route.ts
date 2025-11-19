@@ -1,5 +1,5 @@
 // app/api/crm/analytics/route.ts
-// API endpoint for global analytics and insights
+// API endpoint for global analytics and insights (emails + calls)
 
 import { NextRequest, NextResponse } from 'next/server';
 import {
@@ -9,6 +9,12 @@ import {
   getAnalyticsByRange,
   TIME_RANGES,
 } from '@/lib/supabase/crm-analytics';
+import {
+  getAllAgentCallPerformance,
+  getDailyCallVolume,
+  getDailyCallVolumeByRange,
+  getAgentCallActivityByRange,
+} from '@/lib/supabase/call-analytics';
 
 export async function GET(request: NextRequest) {
   try {
@@ -30,19 +36,38 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Use time-range functions if specific range is requested
+    // Fetch both email and call analytics
     let analytics;
     if (daysBack === TIME_RANGES.ALL_TIME) {
       // Use the original views for all-time data (more efficient)
-      const [offerTypes, dailyVolume, topAgents] = await Promise.all([
+      const [offerTypes, dailyVolume, topAgents, callPerformance, dailyCallVolume] = await Promise.all([
         getOfferTypeAnalytics(),
         getDailyEmailVolume(),
         getTopAgents(10),
+        getAllAgentCallPerformance(),
+        getDailyCallVolume(),
       ]);
-      analytics = { offerTypes, dailyVolume, topAgents };
+
+      analytics = {
+        offerTypes,
+        dailyVolume,
+        topAgents,
+        callPerformance,
+        dailyCallVolume,
+      };
     } else {
       // Use time-range functions
-      analytics = await getAnalyticsByRange(daysBack);
+      const [emailAnalytics, callActivity, dailyCallVolume] = await Promise.all([
+        getAnalyticsByRange(daysBack),
+        getAgentCallActivityByRange(daysBack),
+        getDailyCallVolumeByRange(daysBack),
+      ]);
+
+      analytics = {
+        ...emailAnalytics,
+        callActivity,
+        dailyCallVolume,
+      };
     }
 
     return NextResponse.json({

@@ -5,17 +5,19 @@ import Link from 'next/link'
 import { Card } from '@/components/ui/card'
 import {
   ArrowLeft,
-  TrendingUp,
   Mail,
   Eye,
   MessageSquare,
   Calendar,
   BarChart3,
   Users,
-  Download,
-  FileText
+  Phone,
+  PhoneIncoming,
+  PhoneOutgoing,
+  Clock,
+  CheckCircle2,
+  TrendingUp
 } from 'lucide-react'
-import { downloadAnalyticsCSV, downloadAnalyticsPDF } from '@/lib/export-reports'
 
 interface OfferTypeStats {
   offer_type: string
@@ -25,8 +27,6 @@ interface OfferTypeStats {
   open_rate: number
   reply_rate: number
   avg_offer_price: number
-  avg_down_payment: number
-  avg_monthly_payment: number
 }
 
 interface DailyVolume {
@@ -34,6 +34,17 @@ interface DailyVolume {
   emails_sent: number
   emails_opened: number
   emails_replied: number
+  active_agents: number
+}
+
+interface DailyCallVolume {
+  date: string
+  total_calls: number
+  inbound_calls: number
+  outbound_calls: number
+  answered_calls: number
+  missed_calls: number
+  total_duration: number
   active_agents: number
 }
 
@@ -46,10 +57,25 @@ interface TopAgent {
   reply_rate: number
 }
 
+interface CallPerformance {
+  agent_id: number
+  agent_name: string
+  total_calls: number
+  inbound_calls: number
+  outbound_calls: number
+  answered_calls: number
+  answer_rate: number
+  total_duration: number
+  avg_duration: number
+}
+
 interface AnalyticsData {
   offerTypes: OfferTypeStats[]
   dailyVolume: DailyVolume[]
   topAgents: TopAgent[]
+  callPerformance?: CallPerformance[]
+  callActivity?: CallPerformance[]
+  dailyCallVolume: DailyCallVolume[]
 }
 
 type TimeRange = 'week' | 'month' | 'quarter' | 'year' | 'all'
@@ -84,11 +110,11 @@ export default function AnalyticsPage() {
   }
 
   const timeRangeOptions: { value: TimeRange; label: string }[] = [
-    { value: 'week', label: 'Last Week' },
-    { value: 'month', label: 'Last Month' },
-    { value: 'quarter', label: 'Last Quarter' },
-    { value: 'year', label: 'Last Year' },
-    { value: 'all', label: 'All Time' },
+    { value: 'week', label: '7 Days' },
+    { value: 'month', label: '30 Days' },
+    { value: 'quarter', label: 'Quarter' },
+    { value: 'year', label: 'Year' },
+    { value: 'all', label: 'All-Time' },
   ]
 
   const formatDate = (dateStr: string) => {
@@ -99,9 +125,25 @@ export default function AnalyticsPage() {
     })
   }
 
-  const formatCurrency = (amount: number) => {
-    return `$${amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, '0')}`
   }
+
+  const getTimeRangeLabel = () => {
+    switch (timeRange) {
+      case 'week': return 'Last 7 Days'
+      case 'month': return 'Last 30 Days'
+      case 'quarter': return 'Last Quarter'
+      case 'year': return 'Last Year'
+      case 'all': return 'All-Time'
+      default: return 'Last 30 Days'
+    }
+  }
+
+  // Get call performance data (handles both all-time and time-range responses)
+  const callData = analytics?.callPerformance || analytics?.callActivity || []
 
   if (loading) {
     return (
@@ -132,107 +174,75 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <main className="min-h-screen py-12 px-4">
-      <div className="container mx-auto max-w-7xl space-y-8">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-muted shadow-lg mb-4">
-              <BarChart3 className="w-8 h-8 text-accent" />
-            </div>
-            <h1 className="text-4xl md:text-5xl font-extrabold text-foreground mb-2">Analytics</h1>
-            <p className="text-lg text-muted-foreground">Insights and performance metrics</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Link href="/crm">
-              <button className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-xl font-medium transition-all shadow-lg border-2 border-border">
-                <ArrowLeft className="w-4 h-4" />
-                Back to CRM
-              </button>
-            </Link>
-
-            {/* Export Buttons */}
-            <div className="flex gap-2">
-              <button
-                onClick={() => analytics && downloadAnalyticsCSV(analytics.offerTypes, analytics.topAgents, analytics.dailyVolume, timeRange)}
-                disabled={loading || !analytics}
-                className="flex items-center gap-2 px-4 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-xl font-medium transition-all shadow-lg border-2 border-border disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Download CSV Report"
-              >
-                <FileText className="w-4 h-4" />
-                CSV
-              </button>
-              <button
-                onClick={() => analytics && downloadAnalyticsPDF(analytics.offerTypes, analytics.topAgents, analytics.dailyVolume, timeRange)}
-                disabled={loading || !analytics}
-                className="flex items-center gap-2 px-4 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-xl font-medium transition-all shadow-lg border-2 border-border disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Download PDF Report"
-              >
-                <Download className="w-4 h-4" />
-                PDF
-              </button>
+    <main className="min-h-screen bg-background">
+      {/* Professional Header */}
+      <div className="border-b">
+        <div className="container mx-auto max-w-7xl px-4 py-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <Link href="/crm">
+                <button className="flex items-center gap-2 px-4 py-2 hover:bg-muted rounded-lg font-medium transition-colors mb-4">
+                  <ArrowLeft className="w-4 h-4" />
+                  Back to CRM
+                </button>
+              </Link>
+              <h1 className="text-3xl font-bold text-foreground">Analytics Dashboard</h1>
+              <p className="text-muted-foreground mt-1">Performance metrics and insights</p>
             </div>
           </div>
         </div>
+      </div>
 
+      <div className="container mx-auto max-w-7xl px-4 py-6 space-y-6">
         {/* Time Range Selector */}
-        <Card className="p-4 bg-card border-2 border-border shadow-xl">
-          <div className="flex flex-wrap items-center gap-2">
-            <Calendar className="w-5 h-5 text-accent" />
-            <span className="text-sm font-medium text-muted-foreground mr-2">Time Range:</span>
-            {timeRangeOptions.map((option) => (
-              <button
-                key={option.value}
-                onClick={() => setTimeRange(option.value)}
-                disabled={loading}
-                className={`
-                  px-4 py-2 rounded-lg text-sm font-medium transition-all
-                  ${timeRange === option.value
-                    ? 'bg-accent text-accent-foreground shadow-md'
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                  }
-                  ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-                `}
-              >
-                {option.label}
-              </button>
-            ))}
+        <Card className="p-4 border-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-muted-foreground" />
+              <span className="text-sm font-medium text-foreground">Time Range:</span>
+            </div>
+            <div className="flex gap-2">
+              {timeRangeOptions.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => setTimeRange(option.value)}
+                  disabled={loading}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    timeRange === option.value
+                      ? 'bg-accent text-accent-foreground'
+                      : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                  } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
           </div>
         </Card>
 
-        {/* Top Performing Agents */}
+        {/* Email Analytics Section */}
         <div>
-          <h2 className="text-2xl md:text-3xl font-extrabold text-foreground mb-6">Top Performing Agents</h2>
-          <Card className="bg-card border-2 border-border shadow-xl overflow-hidden">
+          <h2 className="text-xl font-bold text-foreground mb-4">Email Performance - {getTimeRangeLabel()}</h2>
+
+          {/* Top Email Agents */}
+          <Card className="border-2 overflow-hidden mb-4">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-muted border-b-2 border-border">
+                <thead className="bg-muted/50 border-b">
                   <tr>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Rank</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Agent</th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold text-foreground">Sent</th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold text-foreground">Opened</th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold text-foreground">Replied</th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold text-foreground">Reply Rate</th>
+                    <th className="px-6 py-3 text-left text-sm font-medium text-foreground">Agent</th>
+                    <th className="px-6 py-3 text-center text-sm font-medium text-foreground">Sent</th>
+                    <th className="px-6 py-3 text-center text-sm font-medium text-foreground">Opened</th>
+                    <th className="px-6 py-3 text-center text-sm font-medium text-foreground">Replied</th>
+                    <th className="px-6 py-3 text-center text-sm font-medium text-foreground">Reply Rate</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border">
-                  {analytics.topAgents.map((agent, index) => (
+                <tbody className="divide-y">
+                  {analytics.topAgents.slice(0, 10).map((agent) => (
                     <tr key={agent.agent_id} className="hover:bg-muted/50 transition-colors">
                       <td className="px-6 py-4">
-                        <div className={`
-                          w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm
-                          ${index === 0 ? 'bg-accent/30 text-accent' :
-                            index === 1 ? 'bg-accent/20 text-accent' :
-                            index === 2 ? 'bg-accent/10 text-accent' :
-                            'bg-muted text-muted-foreground'}
-                        `}>
-                          {index + 1}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center text-accent font-semibold">
+                          <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center font-semibold">
                             {agent.agent_name.charAt(0)}
                           </div>
                           <span className="font-medium text-foreground">{agent.agent_name}</span>
@@ -242,9 +252,9 @@ export default function AnalyticsPage() {
                       <td className="px-6 py-4 text-center font-medium text-foreground">{agent.total_opened}</td>
                       <td className="px-6 py-4 text-center font-medium text-foreground">{agent.total_replied}</td>
                       <td className="px-6 py-4 text-center">
-                        <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-accent/20 text-accent border border-accent/30">
+                        <span className="font-medium text-foreground">
                           {agent.reply_rate?.toFixed(1) || '0.0'}%
-                        </div>
+                        </span>
                       </td>
                     </tr>
                   ))}
@@ -255,60 +265,37 @@ export default function AnalyticsPage() {
             {analytics.topAgents.length === 0 && (
               <div className="text-center py-16">
                 <Users className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-20" />
-                <p className="text-lg text-muted-foreground">No agent data available</p>
+                <p className="text-lg text-muted-foreground">No email data available</p>
               </div>
             )}
           </Card>
-        </div>
 
-        {/* Daily Email Volume (Last 7 Days) */}
-        <div>
-          <h2 className="text-2xl md:text-3xl font-extrabold text-foreground mb-6">Recent Activity (Last 7 Days)</h2>
-          <Card className="bg-card border-2 border-border shadow-xl overflow-hidden">
+          {/* Daily Email Activity */}
+          <Card className="border-2 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-muted border-b-2 border-border">
+                <thead className="bg-muted/50 border-b">
                   <tr>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Date</th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold text-foreground">Emails Sent</th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold text-foreground">Opened</th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold text-foreground">Replied</th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold text-foreground">Active Agents</th>
+                    <th className="px-6 py-3 text-left text-sm font-medium text-foreground">Date</th>
+                    <th className="px-6 py-3 text-center text-sm font-medium text-foreground">Sent</th>
+                    <th className="px-6 py-3 text-center text-sm font-medium text-foreground">Opened</th>
+                    <th className="px-6 py-3 text-center text-sm font-medium text-foreground">Replied</th>
+                    <th className="px-6 py-3 text-center text-sm font-medium text-foreground">Active Agents</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border">
+                <tbody className="divide-y">
                   {analytics.dailyVolume.slice(0, 7).map((day, index) => (
                     <tr key={index} className="hover:bg-muted/50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-accent" />
+                          <Calendar className="w-4 h-4 text-muted-foreground" />
                           <span className="font-medium text-foreground">{formatDate(day.date)}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <Mail className="w-4 h-4 text-muted-foreground" />
-                          <span className="font-medium text-foreground">{day.emails_sent}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <Eye className="w-4 h-4 text-muted-foreground" />
-                          <span className="font-medium text-foreground">{day.emails_opened}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <MessageSquare className="w-4 h-4 text-accent" />
-                          <span className="font-medium text-accent">{day.emails_replied}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <Users className="w-4 h-4 text-muted-foreground" />
-                          <span className="font-medium text-foreground">{day.active_agents}</span>
-                        </div>
-                      </td>
+                      <td className="px-6 py-4 text-center font-medium text-foreground">{day.emails_sent}</td>
+                      <td className="px-6 py-4 text-center font-medium text-foreground">{day.emails_opened}</td>
+                      <td className="px-6 py-4 text-center font-medium text-foreground">{day.emails_replied}</td>
+                      <td className="px-6 py-4 text-center font-medium text-foreground">{day.active_agents}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -318,7 +305,108 @@ export default function AnalyticsPage() {
             {analytics.dailyVolume.length === 0 && (
               <div className="text-center py-16">
                 <Calendar className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-20" />
-                <p className="text-lg text-muted-foreground">No daily activity data available</p>
+                <p className="text-lg text-muted-foreground">No daily email activity data</p>
+              </div>
+            )}
+          </Card>
+        </div>
+
+        {/* Call Analytics Section */}
+        <div>
+          <h2 className="text-xl font-bold text-foreground mb-4">Call Performance - {getTimeRangeLabel()}</h2>
+
+          {/* Top Call Agents */}
+          <Card className="border-2 overflow-hidden mb-4">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-muted/50 border-b">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-sm font-medium text-foreground">Agent</th>
+                    <th className="px-6 py-3 text-center text-sm font-medium text-foreground">Total Calls</th>
+                    <th className="px-6 py-3 text-center text-sm font-medium text-foreground">Inbound</th>
+                    <th className="px-6 py-3 text-center text-sm font-medium text-foreground">Outbound</th>
+                    <th className="px-6 py-3 text-center text-sm font-medium text-foreground">Answered</th>
+                    <th className="px-6 py-3 text-center text-sm font-medium text-foreground">Answer Rate</th>
+                    <th className="px-6 py-3 text-center text-sm font-medium text-foreground">Avg Duration</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {callData.slice(0, 10).map((agent) => (
+                    <tr key={agent.agent_id} className="hover:bg-muted/50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center font-semibold">
+                            {agent.agent_name.charAt(0)}
+                          </div>
+                          <span className="font-medium text-foreground">{agent.agent_name}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-center font-medium text-foreground">{agent.total_calls || 0}</td>
+                      <td className="px-6 py-4 text-center font-medium text-foreground">{agent.inbound_calls || 0}</td>
+                      <td className="px-6 py-4 text-center font-medium text-foreground">{agent.outbound_calls || 0}</td>
+                      <td className="px-6 py-4 text-center font-medium text-foreground">{agent.answered_calls || 0}</td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="font-medium text-foreground">
+                          {agent.answer_rate?.toFixed(1) || '0.0'}%
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center font-medium text-foreground">
+                        {formatDuration(agent.avg_duration || 0)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {callData.length === 0 && (
+              <div className="text-center py-16">
+                <Phone className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-20" />
+                <p className="text-lg text-muted-foreground">No call data available</p>
+              </div>
+            )}
+          </Card>
+
+          {/* Daily Call Activity */}
+          <Card className="border-2 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-muted/50 border-b">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-sm font-medium text-foreground">Date</th>
+                    <th className="px-6 py-3 text-center text-sm font-medium text-foreground">Total Calls</th>
+                    <th className="px-6 py-3 text-center text-sm font-medium text-foreground">Inbound</th>
+                    <th className="px-6 py-3 text-center text-sm font-medium text-foreground">Outbound</th>
+                    <th className="px-6 py-3 text-center text-sm font-medium text-foreground">Answered</th>
+                    <th className="px-6 py-3 text-center text-sm font-medium text-foreground">Missed</th>
+                    <th className="px-6 py-3 text-center text-sm font-medium text-foreground">Active Agents</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {analytics.dailyCallVolume?.slice(0, 7).map((day, index) => (
+                    <tr key={index} className="hover:bg-muted/50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-muted-foreground" />
+                          <span className="font-medium text-foreground">{formatDate(day.date)}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-center font-medium text-foreground">{day.total_calls}</td>
+                      <td className="px-6 py-4 text-center font-medium text-foreground">{day.inbound_calls}</td>
+                      <td className="px-6 py-4 text-center font-medium text-foreground">{day.outbound_calls}</td>
+                      <td className="px-6 py-4 text-center font-medium text-foreground">{day.answered_calls}</td>
+                      <td className="px-6 py-4 text-center font-medium text-foreground">{day.missed_calls}</td>
+                      <td className="px-6 py-4 text-center font-medium text-foreground">{day.active_agents}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {(!analytics.dailyCallVolume || analytics.dailyCallVolume.length === 0) && (
+              <div className="text-center py-16">
+                <Calendar className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-20" />
+                <p className="text-lg text-muted-foreground">No daily call activity data</p>
               </div>
             )}
           </Card>
