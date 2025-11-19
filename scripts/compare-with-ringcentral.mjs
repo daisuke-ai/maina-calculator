@@ -12,22 +12,26 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// Your RingCentral data from screenshot
+// Your RingCentral data from latest screenshot (actual all-time data)
 const RINGCENTRAL_DATA = {
-  '108': { name: 'Faizan #C', calls: 67, agentName: 'Fazil' },
-  '116': { name: 'Ayesha #C', calls: 50, agentName: 'Ada' },
-  '104': { name: 'Masoumah #C', calls: 33, agentName: 'Lina' },
-  '105': { name: 'Farhat #C', calls: 31, agentName: 'Farhat' },
-  '102': { name: 'Tayyab #C', calls: 31, agentName: 'Burakh' },
+  '122': { name: 'Mishaal #A', calls: 106, agentName: 'Anna' },
+  '104': { name: 'Masoumah #C', calls: 85, agentName: 'Lina' },
+  '111': { name: 'Rameen #A', calls: 39, agentName: 'Ayla' },
+  '121': { name: 'Talha #C', calls: 34, agentName: 'Tabeeb' },
+  '106': { name: 'Fatima #C', calls: 34, agentName: 'Eleena' },
+  '113': { name: 'Laiba #A', calls: 31, agentName: 'Eda' },
+  '114': { name: 'Eman #A', calls: 30, agentName: 'Elif' },
   '103': { name: 'Awais #B', calls: 27, agentName: 'Ozan' },
-  '106': { name: 'Fatima #C', calls: 25, agentName: 'Eleena' },
-  '101': { name: 'Abdullah Abid', calls: 10, agentName: 'Noyaan' },
-  '117': { name: 'English Issue #C', calls: 8, agentName: 'English Issue' },
-  '107': { name: 'Emir #B', calls: 7, agentName: 'Emir' },
-  '120': { name: 'Hannan #A', calls: 6, agentName: 'Hannan' },
-  '119': { name: 'Shahab Javed', calls: 5, agentName: 'Shahab Javed' },
-  '121': { name: 'Talha #C', calls: 1, agentName: 'Tabeeb' },
-  '118': { name: 'Ifaf Shahab', calls: 1, agentName: 'Ifaf Shahab' },
+  '105': { name: 'Farhat #C', calls: 26, agentName: 'Farhat' },
+  '108': { name: 'Faizan #C', calls: 25, agentName: 'Fazil' },
+  '120': { name: 'Hannan #A', calls: 25, agentName: 'Hannan' },
+  '109': { name: 'Mahrukh #C', calls: 20, agentName: 'Mina' },
+  '102': { name: 'Tayyab #C', calls: 18, agentName: 'Burakh' },
+  '101': { name: 'Abdullah Abid', calls: 18, agentName: 'Noyaan' },
+  '107': { name: 'Emir #B', calls: 15, agentName: 'Emir' },
+  '123': { name: 'Ayesha #C', calls: 8, agentName: 'Ada' },
+  '119': { name: 'Shahab Javed', calls: 7, agentName: 'Shahab Javed' },
+  '118': { name: 'Ifaf Shahab', calls: 5, agentName: 'Ifaf Shahab' },
 };
 
 const { data: agents } = await supabase.from('agents').select('id, alias_name');

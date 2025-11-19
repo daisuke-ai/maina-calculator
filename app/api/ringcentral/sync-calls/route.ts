@@ -1,10 +1,11 @@
 // app/api/ringcentral/sync-calls/route-fixed.ts
-// FIXED API endpoint to properly extract extension numbers from legs
+// FIXED API endpoint to properly extract extension numbers from legs using extension ID mapping
 import { NextRequest, NextResponse } from 'next/server';
 import { getCallLog } from '@/lib/ringcentral/client';
 import { createClient } from '@supabase/supabase-js';
 import type { RingCentralCallRecord } from '@/lib/ringcentral/types';
 import { getAgentIdFromCallRecord } from '@/config/ringcentral-mapping';
+import { getExtensionNumberById } from '@/config/extension-id-mapping';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -12,32 +13,48 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 /**
  * Extract extension number from call record
- * Checks multiple locations including legs array
+ * UPDATED: Now uses extension ID mapping to get accurate extension numbers
  */
 function extractExtensionNumber(record: RingCentralCallRecord): string | null {
-  // Try root level first
+  // Try root level first (rarely present)
   if (record.from?.extensionNumber) return record.from.extensionNumber;
   if (record.to?.extensionNumber) return record.to.extensionNumber;
 
-  // Check legs array for extension numbers
+  // Check legs array for extension numbers (also rarely present)
   if (record.legs && record.legs.length > 0) {
     for (const leg of record.legs) {
-      // Check from.extensionNumber in leg
       if (leg.from?.extensionNumber) {
         return leg.from.extensionNumber;
       }
-      // Check to.extensionNumber in leg
       if (leg.to?.extensionNumber) {
         return leg.to.extensionNumber;
       }
     }
 
-    // Also check for extension.id in legs (convert to our extension number if needed)
+    // NEW: Check for extension IDs and convert to numbers using our mapping
     for (const leg of record.legs) {
+      // Check leg.extension.id
       if (leg.extension?.id) {
-        // This is the extension ID, not number, but we can use it for lookup
-        // For now, just log it
-        console.log(`Found extension ID in leg: ${leg.extension.id}`);
+        const extensionNumber = getExtensionNumberById(leg.extension.id);
+        if (extensionNumber) {
+          return extensionNumber;
+        }
+      }
+
+      // Check leg.to.extensionId
+      if (leg.to?.extensionId) {
+        const extensionNumber = getExtensionNumberById(leg.to.extensionId);
+        if (extensionNumber) {
+          return extensionNumber;
+        }
+      }
+
+      // Check leg.from.extensionId
+      if (leg.from?.extensionId) {
+        const extensionNumber = getExtensionNumberById(leg.from.extensionId);
+        if (extensionNumber) {
+          return extensionNumber;
+        }
       }
     }
   }
