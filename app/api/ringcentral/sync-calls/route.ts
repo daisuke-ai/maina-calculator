@@ -165,31 +165,62 @@ export async function POST(request: NextRequest) {
       direction,
       perPage = 1000,
       page = 1,
+      fetchAllPages = false, // New flag to fetch all pages
     } = body;
 
-    console.log('[Sync Calls] Fetching call logs from RingCentral...', {
+    console.log('[Sync Calls] Starting sync from RingCentral...', {
       dateFrom,
       dateTo,
       direction,
       perPage,
       page,
+      fetchAllPages,
     });
 
-    // Fetch call logs from RingCentral
-    const callLogResponse = await getCallLog({
-      dateFrom,
-      dateTo,
-      direction,
-      perPage,
-      page,
-      view: 'Detailed', // Important: Need Detailed view to get legs
-    });
+    let allRecords: any[] = [];
+    let currentPage = page;
+    let hasMorePages = true;
+    let totalPages = 1;
 
-    const records = callLogResponse.records || [];
+    // Fetch all pages if requested
+    while (hasMorePages) {
+      console.log(`[Sync Calls] Fetching page ${currentPage}...`);
 
-    console.log(`[Sync Calls] Fetched ${records.length} call records`);
+      // Fetch call logs from RingCentral with current page
+      const callLogResponse = await getCallLog({
+        dateFrom,
+        dateTo,
+        direction,
+        perPage,
+        page: currentPage,
+        view: 'Detailed', // Important: Need Detailed view to get all call information including legs
+      });
 
-    if (records.length === 0) {
+      const records = callLogResponse.records || [];
+      allRecords = allRecords.concat(records);
+
+      console.log(`[Sync Calls] Page ${currentPage}: Fetched ${records.length} records (Total so far: ${allRecords.length})`);
+
+      // Check if we should fetch more pages
+      if (fetchAllPages && callLogResponse.paging) {
+        const paging = callLogResponse.paging;
+        totalPages = Math.ceil(paging.totalElements / paging.perPage);
+
+        if (currentPage < totalPages && currentPage < 10) { // Limit to 10 pages max for safety
+          currentPage++;
+          // Add a small delay to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } else {
+          hasMorePages = false;
+        }
+      } else {
+        hasMorePages = false;
+      }
+    }
+
+    console.log(`[Sync Calls] Total fetched: ${allRecords.length} call records from ${totalPages} page(s)`);
+
+    if (allRecords.length === 0) {
       return NextResponse.json({
         success: true,
         message: 'No call records to sync',
@@ -199,7 +230,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Transform and prepare for insertion
-    const transformedRecords = records.map(transformCallRecord);
+    const transformedRecords = allRecords.map(transformCallRecord);
 
     // Count accuracy metrics
     const withExtension = transformedRecords.filter(r => r.extension_number).length;
@@ -253,7 +284,8 @@ export async function POST(request: NextRequest) {
       withAgentId: withAgentId,
       accuracy: parseFloat(accuracyPercent),
       filtered: onlyAccurate ? transformedRecords.length - recordsToSync.length : 0,
-      paging: callLogResponse.paging,
+      pagesFetched: totalPages,
+      totalRecordsFetched: allRecords.length,
     });
   } catch (error: any) {
     console.error('[Sync Calls] Error:', error);

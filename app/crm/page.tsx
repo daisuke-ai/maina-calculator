@@ -79,11 +79,6 @@ export default function CRMDashboard() {
   const [sortBy, setSortBy] = useState<'name' | 'sent' | 'reply_rate'>('reply_rate')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [timeRange, setTimeRange] = useState<TimeRange>('month')
-  const [syncing, setSyncing] = useState(false)
-  const [syncMessage, setSyncMessage] = useState<{ type: 'success' | 'error' | null; text: string }>({ type: null, text: '' })
-  const [syncAccuracyMode, setSyncAccuracyMode] = useState(true)
-  const [showAccuracyDialog, setShowAccuracyDialog] = useState(false)
-  const [syncStats, setSyncStats] = useState<{ total: number; synced: number; accuracy: number; filtered: number } | null>(null)
 
   useEffect(() => {
     fetchAgents()
@@ -253,139 +248,6 @@ export default function CRMDashboard() {
     return date.toLocaleDateString()
   }
 
-  const syncCallData = async (useAccuracyMode: boolean = true) => {
-    setSyncing(true)
-    setSyncMessage({ type: null, text: '' })
-
-    try {
-      // Calculate date range for last 2 days (rolling window)
-      // Matches cron strategy to prevent data accumulation
-      const dateTo = new Date()
-      const dateFrom = new Date()
-      dateFrom.setDate(dateFrom.getDate() - 2)
-
-      const response = await fetch('/api/ringcentral/sync-calls', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          dateFrom: dateFrom.toISOString(),
-          dateTo: dateTo.toISOString(),
-          perPage: 500,
-          onlyAccurate: useAccuracyMode
-        })
-      })
-
-      const result = await response.json()
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Failed to sync call data')
-      }
-
-      // Store stats and show accuracy dialog if low accuracy
-      if (result.accuracy && result.accuracy < 50 && !useAccuracyMode) {
-        setSyncStats({
-          total: result.total,
-          synced: result.synced,
-          accuracy: result.accuracy,
-          filtered: result.filtered || 0
-        })
-        setShowAccuracyDialog(true)
-        setSyncing(false)
-        return
-      }
-
-      const filteredText = useAccuracyMode && result.filtered > 0
-        ? ` (filtered ${result.filtered} unmapped calls)`
-        : ''
-
-      setSyncMessage({
-        type: 'success',
-        text: `Successfully synced ${result.synced || 0} call records at ${result.accuracy || 100}% accuracy${filteredText}`
-      })
-
-      // Refresh agent data to show new call metrics
-      await fetchAgents()
-
-      // Clear success message after 5 seconds
-      setTimeout(() => {
-        setSyncMessage({ type: null, text: '' })
-      }, 5000)
-    } catch (err: any) {
-      setSyncMessage({
-        type: 'error',
-        text: err.message || 'Failed to sync call data'
-      })
-
-      // Clear error message after 10 seconds
-      setTimeout(() => {
-        setSyncMessage({ type: null, text: '' })
-      }, 10000)
-    } finally {
-      setSyncing(false)
-    }
-  }
-
-  // Accuracy dialog modal
-  const accuracyDialog = showAccuracyDialog && syncStats && (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="max-w-md w-full bg-card border-2 border-border shadow-2xl">
-        <div className="p-6 space-y-4">
-          <div className="flex items-center gap-3">
-            <AlertCircle className="w-6 h-6 text-yellow-500" />
-            <h2 className="text-xl font-bold text-foreground">Low Accuracy Warning</h2>
-          </div>
-
-          <div className="bg-yellow-50 dark:bg-yellow-950/30 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800">
-            <p className="text-sm text-yellow-900 dark:text-yellow-200">
-              Only <span className="font-bold">{syncStats.accuracy.toFixed(1)}%</span> of calls could be mapped to agents.
-            </p>
-            <ul className="mt-2 text-sm text-yellow-900 dark:text-yellow-200 space-y-1">
-              <li>• Total calls found: <span className="font-semibold">{syncStats.total}</span></li>
-              <li>• Mapped calls: <span className="font-semibold">{syncStats.synced}</span></li>
-              <li>• Unmapped calls: <span className="font-semibold">{syncStats.filtered}</span></li>
-            </ul>
-          </div>
-
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">How would you like to proceed?</p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowAccuracyDialog(false)
-                  setSyncStats(null)
-                  syncCallData(true) // Sync only accurate calls
-                }}
-                className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg font-medium transition-all"
-              >
-                Sync Only Accurate
-              </button>
-              <button
-                onClick={() => {
-                  setShowAccuracyDialog(false)
-                  setSyncStats(null)
-                  syncCallData(false) // Sync all calls including unmapped
-                }}
-                className="flex-1 px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg font-medium transition-all"
-              >
-                Sync All
-              </button>
-            </div>
-            <button
-              onClick={() => {
-                setShowAccuracyDialog(false)
-                setSyncStats(null)
-              }}
-              className="w-full px-4 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-lg font-medium transition-all"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      </Card>
-    </div>
-  )
 
   if (loading) {
     return (
@@ -412,7 +274,6 @@ export default function CRMDashboard() {
 
   return (
     <main className="min-h-screen py-12 px-4">
-      {accuracyDialog}
       <div className="container mx-auto max-w-7xl space-y-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -443,20 +304,6 @@ export default function CRMDashboard() {
               </button>
             </Link>
 
-            {/* Sync Button */}
-            <button
-              onClick={syncCallData}
-              disabled={syncing || loading}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all shadow-lg border-2 ${
-                syncing
-                  ? 'bg-accent/50 text-accent-foreground/50 border-accent/30 cursor-wait'
-                  : 'bg-green-600 hover:bg-green-500 text-white border-green-500'
-              } disabled:opacity-50 disabled:cursor-not-allowed`}
-              title="Sync call data from RingCentral"
-            >
-              <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-              {syncing ? 'Syncing...' : 'Sync Calls'}
-            </button>
 
             {/* Export Buttons */}
             <div className="flex gap-2">
@@ -482,23 +329,6 @@ export default function CRMDashboard() {
           </div>
         </div>
 
-        {/* Sync Status Message */}
-        {syncMessage.type && (
-          <div
-            className={`p-4 rounded-xl flex items-center gap-3 transition-all shadow-lg border-2 ${
-              syncMessage.type === 'success'
-                ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300'
-                : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300'
-            }`}
-          >
-            {syncMessage.type === 'success' ? (
-              <CheckCircle className="w-5 h-5" />
-            ) : (
-              <AlertCircle className="w-5 h-5" />
-            )}
-            <p className="font-medium">{syncMessage.text}</p>
-          </div>
-        )}
 
         {/* Data Range Indicator */}
         <div className="flex items-center justify-between px-4 py-2 bg-accent/10 border-l-4 border-accent rounded-lg">

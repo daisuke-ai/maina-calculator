@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { OfferResult } from '@/lib/calculator/types'
+import { useState, useEffect } from 'react'
+import { OfferResult, PropertyData } from '@/lib/calculator/types'
 import { formatCurrency, formatPercentage } from '@/lib/utils'
 import { exportToPDF } from '@/lib/pdf-export'
 import { exportToExcel } from '@/lib/excel-export'
@@ -25,16 +25,33 @@ interface ResultsTableProps {
   propertyAddress?: string
   askingPrice: number
   monthlyRent: number
+  propertyData: PropertyData
 }
 
-export function ResultsTable({ offers, propertyAddress = 'Property Address', askingPrice, monthlyRent }: ResultsTableProps) {
+// Configuration constants matching backend
+const CONFIG = {
+  closing_cost_percent: 0.02,     // 2% closing cost
+  assignment_fee: 5000,            // $5,000 assignment fee
+  maintenance_rate: 0.1,           // 10% of rent for maintenance
+  management_rate: 0.1,            // 10% of rent for management
+  appreciation_rate: 0.045,        // 4.5% annual appreciation
+  min_rehab_cost: 6000,           // Minimum $6,000 rehab cost
+}
+
+export function ResultsTable({
+  offers,
+  propertyAddress = 'Property Address',
+  askingPrice,
+  monthlyRent,
+  propertyData
+}: ResultsTableProps) {
   const [selectedOffer, setSelectedOffer] = useState<OfferResult | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
 
   // Editable offers state (copy of original offers)
   const [editableOffers, setEditableOffers] = useState<OfferResult[]>(offers)
 
-  // Track which row is being edited: "offer_price", "down_payment", "monthly_payment", "balloon_year", "rehab_cost", or null
+  // Track which row is being edited
   const [editingRow, setEditingRow] = useState<string | null>(null)
 
   // Track which column (offer index) is being edited
@@ -42,6 +59,15 @@ export function ResultsTable({ offers, propertyAddress = 'Property Address', ask
 
   // Temporary edit value
   const [editValue, setEditValue] = useState<string>('')
+
+  // Reset editable offers when new offers prop comes in
+  useEffect(() => {
+    setEditableOffers(offers)
+    // Also clear any active editing state
+    setEditingRow(null)
+    setEditingColumn(null)
+    setEditValue('')
+  }, [offers])
 
   const getOfferLabel = (offerType: string) => {
     if (offerType.includes('Owner')) return 'Owner Favored'
@@ -60,92 +86,248 @@ export function ResultsTable({ offers, propertyAddress = 'Property Address', ask
     setEditValue(currentValue.toString())
   }
 
-  // Recalculate dependent values when a field is edited
+  // Calculate non-debt expenses (everything except monthly payment)
+  const calculateNonDebtExpenses = (): number => {
+    return (
+      propertyData.monthly_property_tax +
+      propertyData.monthly_insurance +
+      propertyData.monthly_hoa_fee +
+      propertyData.monthly_other_fees +
+      (monthlyRent * CONFIG.maintenance_rate) +  // 10% maintenance
+      (monthlyRent * CONFIG.management_rate)     // 10% management
+    )
+  }
+
+  // Evaluate deal viability based on metrics
+  const evaluateDealViability = (
+    offerType: string,
+    downPayment: number,
+    downPaymentPercent: number,
+    monthlyCashFlow: number,
+    netRentalYield: number,
+    amortizationYears: number
+  ): { viability: 'good' | 'marginal' | 'not_viable'; reasons: string[] } => {
+    const reasons: string[] = []
+
+    // Get target yield range based on offer type
+    let minYield: number
+    if (offerType.includes('Owner')) {
+      minYield = 15.0  // Owner Favored: 15-17%
+    } else if (offerType.includes('Balanced')) {
+      minYield = 17.0  // Balanced: 17-20%
+    } else {
+      minYield = 20.0  // Buyer Favored: 20-30%
+    }
+
+    // Check for "Not Viable" conditions
+    if (downPayment < 0) {
+      reasons.push('Negative down payment - deal requires more cash than available')
+      return { viability: 'not_viable', reasons }
+    }
+
+    if (monthlyCashFlow < 100) {
+      reasons.push(`Monthly cash flow too low ($${monthlyCashFlow.toFixed(0)}) - minimum $100 required`)
+      return { viability: 'not_viable', reasons }
+    }
+
+    if (netRentalYield < minYield - 5) {
+      reasons.push(`Net rental yield (${netRentalYield.toFixed(1)}%) is ${(minYield - netRentalYield).toFixed(1)}% below minimum threshold`)
+      return { viability: 'not_viable', reasons }
+    }
+
+    // Check for "Marginal" conditions
+    if (downPaymentPercent < 3) {
+      reasons.push(`Low down payment (${downPaymentPercent.toFixed(1)}%) - less than 3% of offer price`)
+    }
+
+    if (monthlyCashFlow >= 100 && monthlyCashFlow < 200) {
+      reasons.push(`Marginal cash flow ($${monthlyCashFlow.toFixed(0)}/month) - minimum $200 recommended`)
+    }
+
+    if (netRentalYield < minYield && netRentalYield >= minYield - 5) {
+      reasons.push(`Net rental yield (${netRentalYield.toFixed(1)}%) is below minimum threshold (${minYield}%)`)
+    }
+
+    if (amortizationYears > 35) {
+      reasons.push(`Very long amortization (${amortizationYears.toFixed(1)} years) - payoff takes over 35 years`)
+    }
+
+    if (reasons.length > 0) {
+      return { viability: 'marginal', reasons }
+    }
+
+    // If no issues, it's a good deal
+    reasons.push('All metrics meet or exceed target thresholds')
+    return { viability: 'good', reasons }
+  }
+
+  // Comprehensive recalculation function
   const recalculateOffer = (offer: OfferResult, editedField: string, newValue: number): OfferResult => {
     const updated = { ...offer }
 
+    // Get non-debt expenses (constant for all calculations)
+    const nonDebtExpenses = calculateNonDebtExpenses()
+
     switch (editedField) {
-      case 'offer_price':
-        updated.final_offer_price = newValue
-        // Recalculate loan amount (offer price - down payment)
-        updated.loan_amount = newValue - updated.down_payment
-        // Recalculate entry fee (down payment + rehab + closing costs)
-        // Note: closing_costs needs to be recalculated based on new offer price
-        const closing_costs = newValue * 0.03 // 3% closing costs
-        updated.final_entry_fee_amount = updated.down_payment + updated.rehab_cost + closing_costs
-        // Recalculate entry fee percentage
-        updated.final_entry_fee_percent = (updated.final_entry_fee_amount / newValue) * 100
-        // Recalculate down payment percentage
-        updated.down_payment_percent = (updated.down_payment / newValue) * 100
-        break
+      case 'offer_price': {
+        // User changed offer price
+        const offerPrice = newValue
+        updated.final_offer_price = offerPrice
 
-      case 'down_payment':
-        updated.down_payment = newValue
+        // Recalculate closing cost (2% of offer price)
+        const closingCost = offerPrice * CONFIG.closing_cost_percent
+
+        // Recalculate entry fee amount (keeping the same percentage)
+        // Entry Fee = Down Payment + Rehab + Closing + Assignment
+        // So: Down Payment = Entry Fee - Rehab - Closing - Assignment
+        const entryFeeAmount = offerPrice * (updated.final_entry_fee_percent / 100)
+        updated.final_entry_fee_amount = entryFeeAmount
+
+        // Recalculate down payment
+        const downPayment = entryFeeAmount - updated.rehab_cost - closingCost - CONFIG.assignment_fee
+        updated.down_payment = downPayment
+        updated.down_payment_percent = (downPayment / offerPrice) * 100
+
         // Recalculate loan amount
-        updated.loan_amount = updated.final_offer_price - newValue
-        // Recalculate entry fee
-        const closing = updated.final_offer_price * 0.03
-        updated.final_entry_fee_amount = newValue + updated.rehab_cost + closing
-        // Recalculate percentages
-        updated.final_entry_fee_percent = (updated.final_entry_fee_amount / updated.final_offer_price) * 100
-        updated.down_payment_percent = (newValue / updated.final_offer_price) * 100
-        break
+        updated.loan_amount = offerPrice - downPayment
 
-      case 'monthly_payment':
-        updated.monthly_payment = newValue
-        // Recalculate monthly cash flow (monthly rent - monthly payment - operating expenses)
-        const monthly_operating = ((updated.final_offer_price * 0.015) + (updated.final_offer_price * 0.08/12) + 100)
-        updated.final_monthly_cash_flow = monthlyRent - newValue - monthly_operating
+        // Keep the same monthly payment (user didn't change it)
+        // But recalculate amortization period
+        if (updated.monthly_payment > 0) {
+          updated.amortization_years = updated.loan_amount / (updated.monthly_payment * 12)
+        }
+
+        // Recalculate cash flow (monthly payment unchanged)
+        updated.final_monthly_cash_flow = monthlyRent - nonDebtExpenses - updated.monthly_payment
+
         // Recalculate net rental yield
-        const annual_net_income = updated.final_monthly_cash_flow * 12
-        updated.net_rental_yield = (annual_net_income / updated.final_entry_fee_amount) * 100
-        // Recalculate amortization period (loan amount / monthly payment / 12)
-        updated.amortization_years = updated.loan_amount / newValue / 12
-        // Recalculate principal paid during balloon period
-        const months_until_balloon = updated.balloon_period * 12
-        updated.principal_paid = Math.min(newValue * months_until_balloon, updated.loan_amount)
-        // Recalculate balloon payment
-        updated.balloon_payment = Math.max(0, updated.loan_amount - updated.principal_paid)
-        break
+        const annualNetIncome = updated.final_monthly_cash_flow * 12
+        updated.net_rental_yield = (annualNetIncome / entryFeeAmount) * 100
+        updated.final_coc_percent = updated.net_rental_yield // COC same as yield
 
-      case 'balloon_year':
-        const balloon_years = Math.round(newValue)
-        updated.balloon_period = balloon_years
-        // Recalculate principal paid during balloon period
-        const balloon_months = balloon_years * 12
-        updated.principal_paid = Math.min(updated.monthly_payment * balloon_months, updated.loan_amount)
         // Recalculate balloon payment
-        updated.balloon_payment = Math.max(0, updated.loan_amount - updated.principal_paid)
-        break
+        const principalPaid = Math.min(updated.monthly_payment * updated.balloon_period * 12, updated.loan_amount)
+        updated.principal_paid = principalPaid
+        updated.balloon_payment = Math.max(0, updated.loan_amount - principalPaid)
 
-      case 'rehab_cost':
-        const rehab = Math.max(6000, newValue)
-        updated.rehab_cost = rehab
-        // Recalculate entry fee
-        const closing_fee = updated.final_offer_price * 0.03
-        updated.final_entry_fee_amount = updated.down_payment + rehab + closing_fee
-        // Recalculate entry fee percentage
-        updated.final_entry_fee_percent = (updated.final_entry_fee_amount / updated.final_offer_price) * 100
-        // Recalculate net rental yield (if it depends on entry fee)
-        const annual_net = updated.final_monthly_cash_flow * 12
-        updated.net_rental_yield = (annual_net / updated.final_entry_fee_amount) * 100
+        // Recalculate appreciation profit
+        const futureValue = propertyData.listed_price * Math.pow(1 + CONFIG.appreciation_rate, updated.balloon_period)
+        updated.appreciation_profit = futureValue - offerPrice
         break
+      }
+
+      case 'down_payment': {
+        // User changed down payment directly
+        const downPayment = newValue
+        updated.down_payment = downPayment
+        updated.down_payment_percent = (downPayment / updated.final_offer_price) * 100
+
+        // Recalculate loan amount
+        updated.loan_amount = updated.final_offer_price - downPayment
+
+        // Recalculate entry fee (Down Payment + Rehab + Closing + Assignment)
+        const closingCost = updated.final_offer_price * CONFIG.closing_cost_percent
+        const entryFeeAmount = downPayment + updated.rehab_cost + closingCost + CONFIG.assignment_fee
+        updated.final_entry_fee_amount = entryFeeAmount
+        updated.final_entry_fee_percent = (entryFeeAmount / updated.final_offer_price) * 100
+
+        // Keep the same monthly payment, but recalculate amortization
+        if (updated.monthly_payment > 0) {
+          updated.amortization_years = updated.loan_amount / (updated.monthly_payment * 12)
+        }
+
+        // Cash flow unchanged (monthly payment unchanged)
+        updated.final_monthly_cash_flow = monthlyRent - nonDebtExpenses - updated.monthly_payment
+
+        // Recalculate net rental yield with new entry fee
+        const annualNetIncome = updated.final_monthly_cash_flow * 12
+        updated.net_rental_yield = (annualNetIncome / entryFeeAmount) * 100
+        updated.final_coc_percent = updated.net_rental_yield
+
+        // Recalculate balloon payment with new loan amount
+        const principalPaid = Math.min(updated.monthly_payment * updated.balloon_period * 12, updated.loan_amount)
+        updated.principal_paid = principalPaid
+        updated.balloon_payment = Math.max(0, updated.loan_amount - principalPaid)
+        break
+      }
+
+      case 'monthly_payment': {
+        // User changed monthly payment
+        const monthlyPayment = newValue
+        updated.monthly_payment = monthlyPayment
+
+        // Recalculate monthly cash flow
+        updated.final_monthly_cash_flow = monthlyRent - nonDebtExpenses - monthlyPayment
+
+        // Recalculate net rental yield
+        const annualNetIncome = updated.final_monthly_cash_flow * 12
+        updated.net_rental_yield = (annualNetIncome / updated.final_entry_fee_amount) * 100
+        updated.final_coc_percent = updated.net_rental_yield
+
+        // Recalculate amortization period
+        if (monthlyPayment > 0) {
+          updated.amortization_years = updated.loan_amount / (monthlyPayment * 12)
+        } else {
+          updated.amortization_years = Infinity
+        }
+
+        // Recalculate principal paid and balloon payment
+        const principalPaid = Math.min(monthlyPayment * updated.balloon_period * 12, updated.loan_amount)
+        updated.principal_paid = principalPaid
+        updated.balloon_payment = Math.max(0, updated.loan_amount - principalPaid)
+        break
+      }
+
+      case 'balloon_year': {
+        // User changed balloon period
+        const balloonYears = Math.round(newValue)
+        updated.balloon_period = balloonYears
+
+        // Recalculate principal paid during balloon period
+        const principalPaid = Math.min(updated.monthly_payment * balloonYears * 12, updated.loan_amount)
+        updated.principal_paid = principalPaid
+
+        // Recalculate balloon payment
+        updated.balloon_payment = Math.max(0, updated.loan_amount - principalPaid)
+
+        // Recalculate appreciation profit with new balloon period
+        const futureValue = propertyData.listed_price * Math.pow(1 + CONFIG.appreciation_rate, balloonYears)
+        updated.appreciation_profit = futureValue - updated.final_offer_price
+        break
+      }
+
+      case 'rehab_cost': {
+        // User changed rehab cost
+        const rehabCost = Math.max(CONFIG.min_rehab_cost, newValue)
+        updated.rehab_cost = rehabCost
+
+        // Recalculate entry fee (Down Payment + Rehab + Closing + Assignment)
+        const closingCost = updated.final_offer_price * CONFIG.closing_cost_percent
+        const entryFeeAmount = updated.down_payment + rehabCost + closingCost + CONFIG.assignment_fee
+        updated.final_entry_fee_amount = entryFeeAmount
+        updated.final_entry_fee_percent = (entryFeeAmount / updated.final_offer_price) * 100
+
+        // Cash flow unchanged (doesn't depend on rehab cost)
+        // But net rental yield changes because entry fee changed
+        const annualNetIncome = updated.final_monthly_cash_flow * 12
+        updated.net_rental_yield = (annualNetIncome / entryFeeAmount) * 100
+        updated.final_coc_percent = updated.net_rental_yield
+        break
+      }
     }
 
-    // Recalculate deal viability based on new values
-    const yield_threshold = 15 // 15% minimum net rental yield
-    const cash_flow_threshold = 200 // $200 minimum monthly cash flow
+    // Recalculate deal viability with new values
+    const { viability, reasons } = evaluateDealViability(
+      updated.offer_type,
+      updated.down_payment,
+      updated.down_payment_percent,
+      updated.final_monthly_cash_flow,
+      updated.net_rental_yield,
+      updated.amortization_years
+    )
 
-    if (updated.net_rental_yield >= yield_threshold && updated.final_monthly_cash_flow >= cash_flow_threshold) {
-      updated.deal_viability = 'good'
-      updated.viability_reasons = ['All metrics meet or exceed target thresholds']
-    } else if (updated.net_rental_yield >= yield_threshold * 0.8 && updated.final_monthly_cash_flow >= cash_flow_threshold * 0.5) {
-      updated.deal_viability = 'marginal'
-      updated.viability_reasons = ['Metrics are acceptable but below optimal targets']
-    } else {
-      updated.deal_viability = 'not_viable'
-      updated.viability_reasons = ['Metrics below minimum thresholds']
-    }
+    updated.deal_viability = viability
+    updated.viability_reasons = reasons
 
     return updated
   }
@@ -309,7 +491,7 @@ export function ResultsTable({ offers, propertyAddress = 'Property Address', ask
                 <td className="py-3 px-4 font-semibold text-foreground sticky left-0 bg-accent/5 border-r border-border">
                   <div className="flex items-center gap-2">
                     <span>Offer Price</span>
-                    <span className="text-xs text-white font-normal whitespace-nowrap">(Editable)</span>
+                    <span className="text-xs text-muted-foreground font-normal whitespace-nowrap">(Editable)</span>
                   </div>
                 </td>
                 {editableOffers.map((offer, idx) => (
@@ -390,7 +572,7 @@ export function ResultsTable({ offers, propertyAddress = 'Property Address', ask
                 <td className="py-3 px-4 font-semibold text-foreground sticky left-0 bg-accent/5 border-r border-border">
                   <div className="flex items-center gap-2">
                     <span>Down Payment</span>
-                    <span className="text-xs text-white font-normal whitespace-nowrap">(Editable)</span>
+                    <span className="text-xs text-muted-foreground font-normal whitespace-nowrap">(Editable)</span>
                   </div>
                 </td>
                 {editableOffers.map((offer, idx) => (
@@ -448,7 +630,7 @@ export function ResultsTable({ offers, propertyAddress = 'Property Address', ask
                 <td className="py-3 px-4 font-semibold text-foreground sticky left-0 bg-accent/5 border-r border-border">
                   <div className="flex items-center gap-2">
                     <span>Monthly Payment</span>
-                    <span className="text-xs text-white font-normal whitespace-nowrap">(Editable)</span>
+                    <span className="text-xs text-muted-foreground font-normal whitespace-nowrap">(Editable)</span>
                   </div>
                 </td>
                 {editableOffers.map((offer, idx) => (
@@ -510,7 +692,7 @@ export function ResultsTable({ offers, propertyAddress = 'Property Address', ask
                 <td className="py-3 px-4 font-semibold text-foreground sticky left-0 bg-accent/5 border-r border-border">
                   <div className="flex items-center gap-2">
                     <span>Balloon Period</span>
-                    <span className="text-xs text-white font-normal whitespace-nowrap">(Editable)</span>
+                    <span className="text-xs text-muted-foreground font-normal whitespace-nowrap">(Editable)</span>
                   </div>
                 </td>
                 {editableOffers.map((offer, idx) => (
@@ -592,7 +774,7 @@ export function ResultsTable({ offers, propertyAddress = 'Property Address', ask
                   <td className="py-3 px-4 font-semibold text-foreground sticky left-0 bg-accent/5 border-r border-border">
                     <div className="flex items-center gap-2">
                       <span>Rehab Cost</span>
-                      <span className="text-xs text-white font-normal whitespace-nowrap">(Editable, min $6K)</span>
+                      <span className="text-xs text-muted-foreground font-normal whitespace-nowrap">(Editable, min $6K)</span>
                     </div>
                   </td>
                   {editableOffers.map((offer, idx) => (
@@ -644,6 +826,32 @@ export function ResultsTable({ offers, propertyAddress = 'Property Address', ask
                   ))}
                 </tr>
               )}
+
+              {/* Additional Info Section */}
+              <tr className="bg-muted">
+                <td colSpan={editableOffers.length + 1} className="py-2.5 px-4 text-xs font-bold text-foreground uppercase tracking-wide border-r border-border">
+                  Additional Information
+                </td>
+              </tr>
+
+              <tr className="border-b border-border hover:bg-muted/50 transition-colors">
+                <td className="py-3 px-4 font-semibold text-foreground sticky left-0 bg-card border-r border-border">Assignment Fee</td>
+                {editableOffers.map((offer) => (
+                  <td key={offer.offer_type} className="py-3 px-4 text-center text-muted-foreground border-l border-border">
+                    {formatCurrency(CONFIG.assignment_fee)}
+                  </td>
+                ))}
+              </tr>
+
+              <tr className="border-b border-border hover:bg-muted/50 transition-colors">
+                <td className="py-3 px-4 font-semibold text-foreground sticky left-0 bg-card border-r border-border">Closing Cost</td>
+                {editableOffers.map((offer) => (
+                  <td key={offer.offer_type} className="py-3 px-4 text-center text-muted-foreground border-l border-border">
+                    {formatCurrency(offer.final_offer_price * CONFIG.closing_cost_percent)}
+                    <div className="text-xs mt-0.5">({(CONFIG.closing_cost_percent * 100).toFixed(0)}% of offer)</div>
+                  </td>
+                ))}
+              </tr>
 
               {/* Send LOI Buttons Row */}
               <tr className="border-t-2 border-border bg-muted/30">

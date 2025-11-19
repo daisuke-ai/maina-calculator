@@ -38,9 +38,11 @@ export default function Home() {
   const handleAnalyze = async () => {
     if (!propertyData) return
 
-    setLoading(true)
-    setError(null)
+    // Clear any previous results to avoid showing stale data
     setOffers([])
+    setError(null)
+
+    setLoading(true)
     try {
       const response = await fetch('/api/calculate-offers', {
         method: 'POST',
@@ -209,6 +211,7 @@ export default function Home() {
                   propertyAddress={propertyAPIData.ADDRESS}
                   askingPrice={propertyData.listed_price}
                   monthlyRent={propertyData.monthly_rent}
+                  propertyData={propertyData}
                 />
               </div>
             )}

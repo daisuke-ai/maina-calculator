@@ -60,17 +60,9 @@ export class SellerFinanceCalculator {
     }
   }
 
-  // Calculate tiered markup percentage based on listing price
+  // Calculate markup percentage - always 10%
   private calculateTieredMarkup(listed_price: number): number {
-    if (listed_price >= 300000) {
-      return 0.30 // 30% for $300k+
-    } else if (listed_price >= 200000) {
-      return 0.20 // 20% for $200k-$299k
-    } else if (listed_price >= 100000) {
-      return 0.10 // 10% for $100k-$199k
-    } else {
-      return 0.10 // 10% for under $100k
-    }
+    return 0.10 // Always 10% markup regardless of price
   }
 
   calculateMaxOwnerFavoredOffer(property_data: PropertyData): OfferResult {
@@ -78,7 +70,7 @@ export class SellerFinanceCalculator {
     const balloon_period = offer_cfg.balloon_period
     const rehab_cost = this.utils.calculateRehabCost()
 
-    // Calculate offer price with tiered markup
+    // Calculate offer price with 10% markup
     const markup_percent = this.calculateTieredMarkup(property_data.listed_price)
     const offer_price = property_data.listed_price * (1 + markup_percent)
 
@@ -175,7 +167,7 @@ export class SellerFinanceCalculator {
     const balloon_period = offer_cfg.balloon_period
     const rehab_cost = this.utils.calculateRehabCost()
 
-    // Calculate offer price with HALF the tiered markup
+    // Calculate offer price with HALF the markup (5%)
     const markup_percent = this.calculateTieredMarkup(property_data.listed_price)
     const offer_price = property_data.listed_price * (1 + (markup_percent / 2))
 
