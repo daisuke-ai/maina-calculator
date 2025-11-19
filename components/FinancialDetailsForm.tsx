@@ -143,6 +143,18 @@ export function FinancialDetailsForm({
 
   const [showTooltip, setShowTooltip] = React.useState<string | null>(null)
 
+  // Reset form data when new property is fetched
+  React.useEffect(() => {
+    setFormData({
+      listed_price: propertyAPIData.LISTED_PRICE_FINAL || 0,
+      monthly_rent: propertyAPIData.MONTHLY_RENT_FINAL || 0,
+      monthly_property_tax: propertyAPIData.ANNUAL_TAX_FINAL_MONTHLY || 0,
+      monthly_insurance: propertyAPIData.ANNUAL_INSURANCE_FINAL_MONTHLY || 0,
+      monthly_hoa_fee: propertyAPIData.MONTHLY_HOA_FEE_FINAL || 0,
+      monthly_other_fees: 150,
+    })
+  }, [propertyAPIData.ADDRESS]) // Reset when address changes
+
   React.useEffect(() => {
     onFormChange(formData)
   }, [formData])
