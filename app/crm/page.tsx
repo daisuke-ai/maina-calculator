@@ -31,7 +31,8 @@ import {
   Award,
   Zap,
   ArrowRight,
-  ChevronRight
+  ChevronRight,
+  DollarSign
 } from 'lucide-react'
 import { downloadAgentsCSV, downloadAgentsPDF } from '@/lib/export-reports'
 
@@ -226,13 +227,10 @@ export default function CRMDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="relative">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-accent mx-auto"></div>
-            <div className="absolute inset-0 animate-spin rounded-full h-16 w-16 border-t-2 border-accent/30 mx-auto" style={{ animationDirection: 'reverse' }}></div>
-          </div>
-          <p className="text-muted-foreground mt-6 text-lg">Loading CRM data...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent mx-auto"></div>
+          <p className="text-muted-foreground mt-4">Loading CRM data...</p>
         </div>
       </div>
     )
@@ -240,17 +238,17 @@ export default function CRMDashboard() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 py-12 px-4">
+      <div className="min-h-screen bg-background py-12 px-4">
         <div className="container mx-auto max-w-7xl">
-          <Card className="p-8 bg-destructive/5 backdrop-blur border-2 border-destructive/20">
+          <Card className="p-6 bg-destructive/5 border-l-4 border-destructive">
             <div className="flex items-start gap-3">
-              <AlertCircle className="w-6 h-6 text-destructive mt-0.5" />
+              <AlertCircle className="w-5 h-5 text-destructive mt-0.5" />
               <div>
-                <p className="text-destructive font-semibold text-lg">Error Loading Dashboard</p>
-                <p className="text-muted-foreground mt-1">{error}</p>
+                <p className="text-destructive font-semibold">Error Loading Dashboard</p>
+                <p className="text-muted-foreground text-sm mt-1">{error}</p>
                 <button
                   onClick={() => window.location.reload()}
-                  className="mt-4 px-4 py-2 bg-destructive/10 hover:bg-destructive/20 text-destructive border border-destructive/30 rounded-lg font-medium transition-all"
+                  className="mt-3 px-4 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg text-sm font-medium transition-colors"
                 >
                   Retry
                 </button>
@@ -263,66 +261,51 @@ export default function CRMDashboard() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      {/* Modern Header Section */}
-      <div className="bg-gradient-to-r from-accent/10 via-accent/5 to-transparent border-b border-border/50">
-        <div className="container mx-auto max-w-7xl px-4 py-8">
-          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+    <main className="min-h-screen bg-background">
+      {/* Professional Header */}
+      <div className="border-b">
+        <div className="container mx-auto max-w-7xl px-4 py-6">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
             {/* Title Section */}
-            <div className="space-y-1">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-accent to-accent/60 flex items-center justify-center shadow-xl">
-                  <Users className="w-6 h-6 text-accent-foreground" />
-                </div>
-                <h1 className="text-4xl font-extrabold text-foreground tracking-tight">CRM Dashboard</h1>
-              </div>
-              <p className="text-muted-foreground text-lg pl-15">Track team performance and communication metrics</p>
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">CRM Dashboard</h1>
+              <p className="text-muted-foreground mt-1">Monitor team performance and communication metrics</p>
             </div>
 
-            {/* Navigation Buttons */}
-            <div className="flex flex-wrap items-center gap-3">
-              {/* Quick Actions */}
-              <div className="flex items-center gap-2 p-1 bg-muted/50 rounded-xl">
-                <Link href="/crm/analytics">
-                  <button className="flex items-center gap-2 px-4 py-2.5 hover:bg-background rounded-lg font-medium transition-all group">
-                    <BarChart3 className="w-4 h-4 text-accent group-hover:scale-110 transition-transform" />
-                    <span>Analytics</span>
-                    <ChevronRight className="w-3 h-3 opacity-50" />
-                  </button>
-                </Link>
-                <Link href="/crm/pipeline">
-                  <button className="flex items-center gap-2 px-4 py-2.5 hover:bg-background rounded-lg font-medium transition-all group">
-                    <LayoutDashboard className="w-4 h-4 text-accent group-hover:scale-110 transition-transform" />
-                    <span>Pipeline</span>
-                    <ChevronRight className="w-3 h-3 opacity-50" />
-                  </button>
-                </Link>
-              </div>
-
-              {/* Export Actions */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => downloadAgentsCSV(agents, timeRange)}
-                  disabled={loading || agents.length === 0}
-                  className="p-2.5 hover:bg-muted rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
-                  title="Export CSV"
-                >
-                  <FileText className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+            {/* Navigation Actions */}
+            <div className="flex items-center gap-3">
+              <Link href="/crm/analytics">
+                <button className="px-4 py-2 text-sm font-medium hover:bg-muted rounded-lg transition-colors">
+                  Analytics
                 </button>
-                <button
-                  onClick={() => downloadAgentsPDF(agents, timeRange)}
-                  disabled={loading || agents.length === 0}
-                  className="p-2.5 hover:bg-muted rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
-                  title="Export PDF"
-                >
-                  <Download className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+              </Link>
+              <Link href="/crm/pipeline">
+                <button className="px-4 py-2 text-sm font-medium hover:bg-muted rounded-lg transition-colors">
+                  Pipeline
                 </button>
-              </div>
+              </Link>
 
-              {/* Calculator Link */}
+              <div className="h-6 w-px bg-border mx-1" />
+
+              <button
+                onClick={() => downloadAgentsCSV(agents, timeRange)}
+                disabled={loading || agents.length === 0}
+                className="p-2 hover:bg-muted rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Export CSV"
+              >
+                <FileText className="w-4 h-4 text-muted-foreground" />
+              </button>
+              <button
+                onClick={() => downloadAgentsPDF(agents, timeRange)}
+                disabled={loading || agents.length === 0}
+                className="p-2 hover:bg-muted rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Export PDF"
+              >
+                <Download className="w-4 h-4 text-muted-foreground" />
+              </button>
+
               <Link href="/">
-                <button className="flex items-center gap-2 px-5 py-2.5 bg-background hover:bg-muted border-2 border-border rounded-xl font-medium transition-all shadow-sm hover:shadow-lg group">
-                  <ExternalLink className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                <button className="px-4 py-2 bg-accent hover:bg-accent/90 text-accent-foreground rounded-lg text-sm font-medium transition-colors">
                   Calculator
                 </button>
               </Link>
@@ -331,28 +314,25 @@ export default function CRMDashboard() {
         </div>
       </div>
 
-      <div className="container mx-auto max-w-7xl px-4 py-8 space-y-8">
-        {/* Time Range Pills */}
+      <div className="container mx-auto max-w-7xl px-4 py-6 space-y-6">
+        {/* Time Range and Actions Bar */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 p-1.5 bg-muted/50 rounded-2xl backdrop-blur">
+          <div className="flex items-center gap-1 p-1 bg-muted rounded-lg">
             {timeRangeOptions.map((option) => (
               <button
                 key={option.value}
                 onClick={() => setTimeRange(option.value)}
                 disabled={loading}
                 className={`
-                  relative px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-300
+                  px-4 py-2 rounded-md text-sm font-medium transition-colors
                   ${timeRange === option.value
-                    ? 'bg-background text-foreground shadow-lg scale-105'
+                    ? 'bg-background text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
                   }
                   ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                 `}
               >
-                {timeRange === option.value && (
-                  <div className="absolute inset-0 bg-gradient-to-r from-accent/20 to-accent/10 rounded-xl" />
-                )}
-                <span className="relative">{option.label}</span>
+                {option.label}
               </button>
             ))}
           </div>
@@ -360,31 +340,22 @@ export default function CRMDashboard() {
           <button
             onClick={fetchAgents}
             disabled={loading}
-            className="flex items-center gap-2 px-5 py-2.5 bg-background hover:bg-muted border border-border rounded-xl font-medium transition-all shadow-sm hover:shadow-lg group disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
           >
-            <RefreshCw className={`w-4 h-4 group-hover:rotate-180 transition-transform duration-500 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </button>
         </div>
 
-        {/* Key Metrics Grid */}
+        {/* Key Metrics - Professional Style */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-          {/* Active Pipeline Card */}
+          {/* Pipeline Value */}
           {pipelineSummary && (
-            <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-500/10 via-green-500/5 to-transparent border-emerald-500/20 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-500/20 to-transparent rounded-full blur-3xl" />
-              <div className="p-6 relative">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="p-3 bg-emerald-500/10 rounded-xl">
-                    <Target className="w-6 h-6 text-emerald-500" />
-                  </div>
-                  <span className="text-xs font-medium text-emerald-600 bg-emerald-500/10 px-2 py-1 rounded-full">
-                    {((pipelineSummary.overall_conversion_rate as number) || 0).toFixed(1)}% Conv.
-                  </span>
-                </div>
+            <Card className="p-6 border-2">
+              <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Active Pipeline</p>
-                  <p className="text-3xl font-bold text-foreground mb-1">
+                  <p className="text-sm text-muted-foreground">Pipeline Value</p>
+                  <p className="text-2xl font-bold text-foreground mt-1">
                     {new Intl.NumberFormat('en-US', {
                       style: 'currency',
                       currency: 'USD',
@@ -392,209 +363,164 @@ export default function CRMDashboard() {
                       maximumFractionDigits: 0,
                     }).format((pipelineSummary.active_pipeline_value as number) || 0)}
                   </p>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Activity className="w-3 h-3" />
-                    <span>{(pipelineSummary.total_active_deals as number) || 0} active deals</span>
-                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {(pipelineSummary.total_active_deals as number) || 0} deals • {((pipelineSummary.overall_conversion_rate as number) || 0).toFixed(1)}% conv
+                  </p>
                 </div>
+                <DollarSign className="w-5 h-5 text-muted-foreground" />
               </div>
             </Card>
           )}
 
-          {/* Email Performance Card */}
-          <Card className="relative overflow-hidden bg-gradient-to-br from-blue-500/10 via-indigo-500/5 to-transparent border-blue-500/20 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/20 to-transparent rounded-full blur-3xl" />
-            <div className="p-6 relative">
-              <div className="flex items-start justify-between mb-4">
-                <div className="p-3 bg-blue-500/10 rounded-xl">
-                  <Mail className="w-6 h-6 text-blue-500" />
-                </div>
-                <span className="text-xs font-medium text-blue-600 bg-blue-500/10 px-2 py-1 rounded-full">
-                  {avgReplyRate}% Reply
-                </span>
-              </div>
+          {/* Email Metrics */}
+          <Card className="p-6 border-2">
+            <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Email Outreach</p>
-                <p className="text-3xl font-bold text-foreground mb-1">{totalSent.toLocaleString()}</p>
-                <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <MessageSquare className="w-3 h-3" />
-                    {totalReplied} replies
-                  </span>
-                </div>
+                <p className="text-sm text-muted-foreground">Emails Sent</p>
+                <p className="text-2xl font-bold text-foreground mt-1">{totalSent.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {totalReplied} replies • {avgReplyRate}% rate
+                </p>
               </div>
+              <Mail className="w-5 h-5 text-muted-foreground" />
             </div>
           </Card>
 
-          {/* Call Performance Card */}
-          <Card className="relative overflow-hidden bg-gradient-to-br from-purple-500/10 via-pink-500/5 to-transparent border-purple-500/20 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-500/20 to-transparent rounded-full blur-3xl" />
-            <div className="p-6 relative">
-              <div className="flex items-start justify-between mb-4">
-                <div className="p-3 bg-purple-500/10 rounded-xl">
-                  <Phone className="w-6 h-6 text-purple-500" />
-                </div>
-                <span className="text-xs font-medium text-purple-600 bg-purple-500/10 px-2 py-1 rounded-full">
-                  {avgAnswerRate}% Answer
-                </span>
-              </div>
+          {/* Call Metrics */}
+          <Card className="p-6 border-2">
+            <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Call Activity</p>
-                <p className="text-3xl font-bold text-foreground mb-1">{totalCalls.toLocaleString()}</p>
-                <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    {formatDuration(avgCallDuration)} avg
-                  </span>
-                </div>
+                <p className="text-sm text-muted-foreground">Total Calls</p>
+                <p className="text-2xl font-bold text-foreground mt-1">{totalCalls.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {formatDuration(avgCallDuration)} avg • {avgAnswerRate}% answer
+                </p>
               </div>
+              <Phone className="w-5 h-5 text-muted-foreground" />
             </div>
           </Card>
 
-          {/* Team Performance Card */}
-          <Card className="relative overflow-hidden bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-transparent border-amber-500/20 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-500/20 to-transparent rounded-full blur-3xl" />
-            <div className="p-6 relative">
-              <div className="flex items-start justify-between mb-4">
-                <div className="p-3 bg-amber-500/10 rounded-xl">
-                  <Award className="w-6 h-6 text-amber-500" />
-                </div>
-                <span className="text-xs font-medium text-amber-600 bg-amber-500/10 px-2 py-1 rounded-full">
-                  {timeRange === 'month' ? '30 Days' : timeRangeOptions.find(o => o.value === timeRange)?.label}
-                </span>
-              </div>
+          {/* Active Agents */}
+          <Card className="p-6 border-2">
+            <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Active Agents</p>
-                <p className="text-3xl font-bold text-foreground mb-1">{agents.length}</p>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <Zap className="w-3 h-3" />
-                  <span>Team members tracked</span>
-                </div>
+                <p className="text-sm text-muted-foreground">Active Agents</p>
+                <p className="text-2xl font-bold text-foreground mt-1">{agents.length}</p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {timeRange === 'month' ? 'Last 30 days' : timeRangeOptions.find(o => o.value === timeRange)?.label}
+                </p>
               </div>
+              <Users className="w-5 h-5 text-muted-foreground" />
             </div>
           </Card>
         </div>
 
         {/* Search Bar */}
         <div className="relative">
-          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             type="text"
             placeholder="Search agents by name or email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-12 h-12 bg-background/50 backdrop-blur border-2 border-border/50 text-foreground text-base rounded-xl focus:border-accent/50 transition-all shadow-sm"
+            className="pl-10 h-10 bg-background border text-foreground"
           />
         </div>
 
-        {/* Agents Table - Modern Design */}
-        <Card className="bg-background/50 backdrop-blur border border-border/50 shadow-2xl overflow-hidden">
+        {/* Agents Table - Clean Professional Design */}
+        <Card className="border">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gradient-to-r from-muted/80 to-muted/60 border-b border-border/50">
+              <thead className="border-b bg-muted/50">
                 <tr>
-                  <th className="px-6 py-5 text-left">
+                  <th className="px-6 py-3 text-left">
                     <button
                       onClick={() => toggleSort('name')}
-                      className="flex items-center gap-2 font-semibold text-sm text-foreground hover:text-accent transition-colors group"
+                      className="flex items-center gap-1 text-sm font-medium text-foreground hover:text-accent transition-colors"
                     >
-                      <span>Agent</span>
-                      <ArrowUpDown className="w-3.5 h-3.5 opacity-50 group-hover:opacity-100" />
+                      Agent
+                      <ArrowUpDown className="w-3.5 h-3.5 opacity-50" />
                     </button>
                   </th>
-                  <th className="px-6 py-5 text-center">
+                  <th className="px-6 py-3 text-center">
                     <button
                       onClick={() => toggleSort('sent')}
-                      className="flex items-center gap-2 font-semibold text-sm text-foreground hover:text-accent transition-colors mx-auto group"
+                      className="flex items-center gap-1 text-sm font-medium text-foreground hover:text-accent transition-colors mx-auto"
                     >
-                      <span>Emails</span>
-                      <ArrowUpDown className="w-3.5 h-3.5 opacity-50 group-hover:opacity-100" />
+                      Emails
+                      <ArrowUpDown className="w-3.5 h-3.5 opacity-50" />
                     </button>
                   </th>
-                  <th className="px-6 py-5 text-center font-semibold text-sm text-foreground">
-                    <span className="flex items-center gap-2 justify-center">
-                      <MessageSquare className="w-3.5 h-3.5 opacity-50" />
-                      Replies
-                    </span>
+                  <th className="px-6 py-3 text-center text-sm font-medium text-foreground">
+                    Replies
                   </th>
-                  <th className="px-6 py-5 text-center">
+                  <th className="px-6 py-3 text-center">
                     <button
                       onClick={() => toggleSort('reply_rate')}
-                      className="flex items-center gap-2 font-semibold text-sm text-foreground hover:text-accent transition-colors mx-auto group"
+                      className="flex items-center gap-1 text-sm font-medium text-foreground hover:text-accent transition-colors mx-auto"
                     >
-                      <span>Reply Rate</span>
-                      <ArrowUpDown className="w-3.5 h-3.5 opacity-50 group-hover:opacity-100" />
+                      Reply Rate
+                      <ArrowUpDown className="w-3.5 h-3.5 opacity-50" />
                     </button>
                   </th>
-                  <th className="px-6 py-5 text-center font-semibold text-sm text-foreground">
-                    <span className="flex items-center gap-2 justify-center">
-                      <Phone className="w-3.5 h-3.5 opacity-50" />
-                      Calls
-                    </span>
+                  <th className="px-6 py-3 text-center text-sm font-medium text-foreground">
+                    Calls
                   </th>
-                  <th className="px-6 py-5 text-center font-semibold text-sm text-foreground">Answer Rate</th>
-                  <th className="px-6 py-5 text-center font-semibold text-sm text-foreground">Last Active</th>
-                  <th className="px-6 py-5 text-center font-semibold text-sm text-foreground">Actions</th>
+                  <th className="px-6 py-3 text-center text-sm font-medium text-foreground">
+                    Answer Rate
+                  </th>
+                  <th className="px-6 py-3 text-center text-sm font-medium text-foreground">
+                    Last Active
+                  </th>
+                  <th className="px-6 py-3 text-center text-sm font-medium text-foreground">
+                    Actions
+                  </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/30">
+              <tbody className="divide-y">
                 {filteredAgents.map((agent, index) => (
-                  <tr key={agent.id} className="hover:bg-muted/30 transition-all duration-200 group">
-                    <td className="px-6 py-5">
+                  <tr key={agent.id} className="hover:bg-muted/50 transition-colors">
+                    <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="relative">
-                          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-accent/20 to-accent/10 flex items-center justify-center text-accent font-semibold text-lg shadow-sm group-hover:shadow-lg transition-all">
-                            {agent.aliasName.charAt(0)}
-                          </div>
-                          {agent.last_email_sent && (
-                            <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-background"></div>
-                          )}
+                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center font-medium text-sm">
+                          {agent.aliasName.charAt(0)}
                         </div>
                         <div>
-                          <p className="font-semibold text-foreground">{agent.aliasName}</p>
+                          <p className="font-medium text-foreground">{agent.aliasName}</p>
                           <p className="text-sm text-muted-foreground">{agent.email}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-5">
-                      <div className="text-center">
-                        <p className="font-semibold text-lg text-foreground">{(agent[emailSentField] as number) || 0}</p>
-                        <p className="text-xs text-muted-foreground">sent</p>
-                      </div>
+                    <td className="px-6 py-4 text-center">
+                      <p className="font-medium text-foreground">{(agent[emailSentField] as number) || 0}</p>
+                      <p className="text-xs text-muted-foreground">sent</p>
                     </td>
-                    <td className="px-6 py-5">
-                      <div className="text-center">
-                        <p className="font-semibold text-lg text-foreground">{(agent[emailRepliedField] as number) || 0}</p>
-                        <p className="text-xs text-muted-foreground">received</p>
-                      </div>
+                    <td className="px-6 py-4 text-center">
+                      <p className="font-medium text-foreground">{(agent[emailRepliedField] as number) || 0}</p>
+                      <p className="text-xs text-muted-foreground">received</p>
                     </td>
-                    <td className="px-6 py-5 text-center">
-                      <div className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-gradient-to-r from-blue-500/20 to-indigo-500/20 text-blue-600 border border-blue-500/30">
+                    <td className="px-6 py-4 text-center">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-accent/10 text-accent-foreground border border-accent/20">
                         {((agent[replyRateField] as number) || 0).toFixed(1)}%
-                      </div>
+                      </span>
                     </td>
-                    <td className="px-6 py-5">
-                      <div className="text-center">
-                        <p className="font-semibold text-lg text-foreground">{(agent[callsField] as number) || 0}</p>
-                        <p className="text-xs text-muted-foreground">{(agent[answeredCallsField] as number) || 0} answered</p>
-                      </div>
+                    <td className="px-6 py-4 text-center">
+                      <p className="font-medium text-foreground">{(agent[callsField] as number) || 0}</p>
+                      <p className="text-xs text-muted-foreground">{(agent[answeredCallsField] as number) || 0} answered</p>
                     </td>
-                    <td className="px-6 py-5 text-center">
-                      <div className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-600 border border-purple-500/30">
+                    <td className="px-6 py-4 text-center">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-muted text-foreground">
                         {((agent[answerRateField] as number) || 0).toFixed(1)}%
-                      </div>
+                      </span>
                     </td>
-                    <td className="px-6 py-5">
-                      <div className="text-center">
-                        <p className="text-sm text-muted-foreground">{formatDate(agent.last_email_sent)}</p>
-                      </div>
+                    <td className="px-6 py-4 text-center">
+                      <p className="text-sm text-muted-foreground">{formatDate(agent.last_email_sent)}</p>
                     </td>
-                    <td className="px-6 py-5 text-center">
+                    <td className="px-6 py-4 text-center">
                       <Link href={`/crm/agents/${agent.id}`}>
-                        <button className="inline-flex items-center gap-2 px-4 py-2 bg-background hover:bg-muted border border-border rounded-lg text-sm font-medium transition-all shadow-sm hover:shadow-lg group">
-                          <Eye className="w-3.5 h-3.5 opacity-70 group-hover:opacity-100" />
+                        <button className="inline-flex items-center gap-1 px-3 py-1.5 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg text-sm font-medium transition-colors">
+                          <Eye className="w-3.5 h-3.5" />
                           View
-                          <ArrowRight className="w-3 h-3 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
                         </button>
                       </Link>
                     </td>
@@ -605,10 +531,10 @@ export default function CRMDashboard() {
           </div>
 
           {filteredAgents.length === 0 && (
-            <div className="text-center py-16 px-4">
-              <Users className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-20" />
-              <p className="text-lg font-medium text-muted-foreground mb-2">No agents found</p>
-              <p className="text-sm text-muted-foreground">Try adjusting your search or filters</p>
+            <div className="text-center py-12">
+              <Users className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+              <p className="text-muted-foreground">No agents found</p>
+              <p className="text-sm text-muted-foreground mt-1">Try adjusting your search criteria</p>
             </div>
           )}
         </Card>
