@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Script to re-sync all RingCentral calls
+// Script to re-sync all RingCentral calls with flexible date ranges
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -10,21 +10,47 @@ const __dirname = dirname(__filename);
 // Load .env.local
 dotenv.config({ path: join(__dirname, '..', '.env.local') });
 
+// Date range presets
+const PRESETS = {
+  'all-time': { days: 3650, label: 'All-Time (10 years)' },
+  'last-year': { days: 365, label: 'Last 365 Days' },
+  'last-6-months': { days: 180, label: 'Last 6 Months' },
+  'last-3-months': { days: 90, label: 'Last 3 Months' },
+  'last-month': { days: 30, label: 'Last 30 Days' },
+  'last-week': { days: 7, label: 'Last 7 Days' },
+};
+
 async function resyncCalls() {
   console.log('='.repeat(80));
   console.log('RE-SYNCING RINGCENTRAL CALLS');
   console.log('='.repeat(80));
-  
+
   const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-  
-  // Calculate date range - last 365 days (adjust as needed)
+
+  // Get date range from command line argument or use default
+  const presetArg = process.argv[2] || 'all-time';
+  const preset = PRESETS[presetArg];
+
+  if (!preset) {
+    console.error(`\n❌ Invalid preset: ${presetArg}`);
+    console.log('\nAvailable presets:');
+    Object.entries(PRESETS).forEach(([key, value]) => {
+      console.log(`  - ${key.padEnd(15)} ${value.label}`);
+    });
+    console.log('\nUsage: node scripts/resync-ringcentral.mjs [preset]');
+    console.log('Example: node scripts/resync-ringcentral.mjs last-3-months\n');
+    process.exit(1);
+  }
+
+  // Calculate date range
   const dateTo = new Date();
   const dateFrom = new Date();
-  dateFrom.setDate(dateFrom.getDate() - 365);
+  dateFrom.setDate(dateFrom.getDate() - preset.days);
   
-  console.log('\nSync Parameters:');
-  console.log(`  Date From: ${dateFrom.toISOString()}`);
-  console.log(`  Date To: ${dateTo.toISOString()}`);
+  console.log(`\nSync Parameters: ${preset.label}`);
+  console.log(`  Date From: ${dateFrom.toLocaleDateString()} ${dateFrom.toLocaleTimeString()}`);
+  console.log(`  Date To: ${dateTo.toLocaleDateString()} ${dateTo.toLocaleTimeString()}`);
+  console.log(`  Days Back: ${preset.days}`);
   console.log(`  Fetch All Pages: Yes`);
   console.log(`  Only Accurate: No (include unmapped for analysis)`);
   
