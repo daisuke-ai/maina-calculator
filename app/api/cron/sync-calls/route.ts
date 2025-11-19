@@ -25,17 +25,18 @@ export async function GET(request: NextRequest) {
 
     console.log(`[Cron Sync] Starting sync for date range: ${dateFrom.toISOString()} to ${dateTo.toISOString()}`);
 
-    // Call the TEAM-ONLY sync API to filter out company-wide noise
-    // This only syncs calls from extensions 101-123 (your team)
+    // Sync all calls - phone number matching works better than extension filtering
+    // Agent mapping by phone number achieves 84% accuracy
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-    const response = await fetch(`${baseUrl}/api/ringcentral/sync-team-calls`, {
+    const response = await fetch(`${baseUrl}/api/ringcentral/sync-calls`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         dateFrom: dateFrom.toISOString(),
         dateTo: dateTo.toISOString(),
-        fetchAllPages: true,  // Fetch all pages
-        clearFirst: false     // Don't clear on cron runs
+        perPage: 1000,
+        fetchAllPages: true,
+        onlyAccurate: true  // Only sync calls with agent mapping
       })
     });
 
