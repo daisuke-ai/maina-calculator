@@ -25,7 +25,7 @@ export const EXTENSION_ID_TO_NUMBER: Record<string, string> = {
   "234521052": "123"
 };
 
-export const EXTENSION_NUMBER_TO_ID: Record<string, string> = {
+export const EXTENSION_NUMBER_TO_ID: Record<string, number> = {
   "101": 191579052,
   "102": 156801053,
   "103": 157001053,
@@ -55,5 +55,6 @@ export function getExtensionNumberById(extensionId: string | number | undefined 
 
 export function getExtensionIdByNumber(extensionNumber: string | undefined | null): string | null {
   if (!extensionNumber) return null;
-  return EXTENSION_NUMBER_TO_ID[extensionNumber] || null;
+  const id = EXTENSION_NUMBER_TO_ID[extensionNumber];
+  return id ? id.toString() : null;
 }

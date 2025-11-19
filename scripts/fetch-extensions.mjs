@@ -86,7 +86,7 @@ async function fetchExtensions() {
 
 export const EXTENSION_ID_TO_NUMBER: Record<string, string> = ${JSON.stringify(mapping, null, 2)};
 
-export const EXTENSION_NUMBER_TO_ID: Record<string, string> = ${JSON.stringify(reverseMapping, null, 2)};
+export const EXTENSION_NUMBER_TO_ID: Record<string, number> = ${JSON.stringify(reverseMapping, null, 2)};
 
 export function getExtensionNumberById(extensionId: string | number | undefined | null): string | null {
   if (!extensionId) return null;
@@ -95,7 +95,8 @@ export function getExtensionNumberById(extensionId: string | number | undefined 
 
 export function getExtensionIdByNumber(extensionNumber: string | undefined | null): string | null {
   if (!extensionNumber) return null;
-  return EXTENSION_NUMBER_TO_ID[extensionNumber] || null;
+  const id = EXTENSION_NUMBER_TO_ID[extensionNumber];
+  return id ? id.toString() : null;
 }
 `;
 
