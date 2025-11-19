@@ -83,7 +83,7 @@ export default function CRMDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
-  const [sortBy, setSortBy] = useState<'name' | 'sent' | 'reply_rate'>('reply_rate')
+  const [sortBy, setSortBy] = useState<'name' | 'sent' | 'reply_rate' | 'calls' | 'answer_rate'>('reply_rate')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [timeRange, setTimeRange] = useState<TimeRange>('month')
 
@@ -152,6 +152,14 @@ export default function CRMDashboard() {
         const aVal = timeRange === 'month' ? a.reply_rate_30d : a.reply_rate
         const bVal = timeRange === 'month' ? b.reply_rate_30d : b.reply_rate
         comparison = (aVal || 0) - (bVal || 0)
+      } else if (sortBy === 'calls') {
+        const aVal = timeRange === 'month' ? a.calls_30d : a.total_calls
+        const bVal = timeRange === 'month' ? b.calls_30d : b.total_calls
+        comparison = (aVal || 0) - (bVal || 0)
+      } else if (sortBy === 'answer_rate') {
+        const aVal = timeRange === 'month' ? a.answer_rate_30d : a.answer_rate
+        const bVal = timeRange === 'month' ? b.answer_rate_30d : b.answer_rate
+        comparison = (aVal || 0) - (bVal || 0)
       }
       return sortOrder === 'asc' ? comparison : -comparison
     })
@@ -201,7 +209,7 @@ export default function CRMDashboard() {
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
-  const toggleSort = (field: 'name' | 'sent' | 'reply_rate') => {
+  const toggleSort = (field: 'name' | 'sent' | 'reply_rate' | 'calls' | 'answer_rate') => {
     if (sortBy === field) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
     } else {
@@ -463,11 +471,23 @@ export default function CRMDashboard() {
                       <ArrowUpDown className="w-3.5 h-3.5 opacity-50" />
                     </button>
                   </th>
-                  <th className="px-6 py-3 text-center text-sm font-medium text-foreground">
-                    Calls
+                  <th className="px-6 py-3 text-center">
+                    <button
+                      onClick={() => toggleSort('calls')}
+                      className="flex items-center gap-1 text-sm font-medium text-foreground hover:text-accent transition-colors mx-auto"
+                    >
+                      Calls
+                      <ArrowUpDown className="w-3.5 h-3.5 opacity-50" />
+                    </button>
                   </th>
-                  <th className="px-6 py-3 text-center text-sm font-medium text-foreground">
-                    Answer Rate
+                  <th className="px-6 py-3 text-center">
+                    <button
+                      onClick={() => toggleSort('answer_rate')}
+                      className="flex items-center gap-1 text-sm font-medium text-foreground hover:text-accent transition-colors mx-auto"
+                    >
+                      Answer Rate
+                      <ArrowUpDown className="w-3.5 h-3.5 opacity-50" />
+                    </button>
                   </th>
                   <th className="px-6 py-3 text-center text-sm font-medium text-foreground">
                     Last Active
