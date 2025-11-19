@@ -446,9 +446,23 @@ export function ResultsTable({
                 </th>
                 {editableOffers.map((offer) => {
                   const colors = getOfferColorScheme(offer.offer_type)
+                  const label = getOfferLabel(offer.offer_type)
+                  let description = ''
+
+                  if (offer.offer_type.includes('Owner')) {
+                    description = '10% below list'
+                  } else if (offer.offer_type.includes('Balanced')) {
+                    description = 'Average price'
+                  } else {
+                    description = 'Listed price'
+                  }
+
                   return (
                     <th key={offer.offer_type} className={`text-center py-4 px-4 min-w-[180px] ${colors.headerBg} border-l border-border`}>
-                      <span className={`text-sm font-bold ${colors.headerText}`}>{getOfferLabel(offer.offer_type)}</span>
+                      <div className="flex flex-col items-center gap-1">
+                        <span className={`text-sm font-bold ${colors.headerText}`}>{label}</span>
+                        <span className="text-xs text-muted-foreground font-normal">({description})</span>
+                      </div>
                     </th>
                   )
                 })}
