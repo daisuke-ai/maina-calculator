@@ -182,7 +182,7 @@ export default function AgentDetailPage() {
 
   const getStatusIcon = (email: AgentData['emails'][0]) => {
     if (email.replied) {
-      return <CheckCircle2 className="w-5 h-5 text-accent" />
+      return <CheckCircle2 className="w-5 h-5 text-muted-foreground" />
     }
     if (email.opened) {
       return <Eye className="w-5 h-5 text-muted-foreground" />
@@ -225,33 +225,35 @@ export default function AgentDetailPage() {
   }
 
   return (
-    <main className="min-h-screen py-12 px-4">
-      <div className="container mx-auto max-w-7xl space-y-8">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+    <main className="min-h-screen bg-background">
+      {/* Professional Header */}
+      <div className="border-b">
+        <div className="container mx-auto max-w-7xl px-4 py-6">
           <Link href="/crm">
-            <button className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-xl font-medium transition-all shadow-lg border-2 border-border">
+            <button className="flex items-center gap-2 px-4 py-2 hover:bg-muted rounded-lg font-medium transition-colors">
               <ArrowLeft className="w-4 h-4" />
               Back to Agents
             </button>
           </Link>
         </div>
+      </div>
 
+      <div className="container mx-auto max-w-7xl px-4 py-6 space-y-6">
         {/* Agent Info Card */}
-        <Card className="p-8 bg-card border-2 border-border shadow-xl">
+        <Card className="p-6 border-2">
           <div className="flex items-start gap-6">
-            <div className="w-20 h-20 rounded-full bg-accent/20 flex items-center justify-center text-accent font-bold text-3xl shadow-lg">
+            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center font-bold text-2xl">
               {agent.aliasName.charAt(0)}
             </div>
             <div className="flex-1">
-              <h1 className="text-3xl md:text-4xl font-extrabold text-foreground mb-3">{agent.aliasName}</h1>
+              <h1 className="text-2xl font-bold text-foreground mb-2">{agent.aliasName}</h1>
               <div className="flex flex-wrap gap-6 text-sm">
                 <div className="flex items-center gap-2 text-muted-foreground">
-                  <Mail className="w-4 h-4 text-accent" />
+                  <Mail className="w-4 h-4" />
                   <span>{agent.email}</span>
                 </div>
                 <div className="flex items-center gap-2 text-muted-foreground">
-                  <Phone className="w-4 h-4 text-accent" />
+                  <Phone className="w-4 h-4" />
                   <span>{agent.phone}</span>
                 </div>
               </div>
@@ -259,46 +261,46 @@ export default function AgentDetailPage() {
           </div>
         </Card>
 
-        {/* Performance Stats */}
+        {/* Email Performance - All-Time */}
         <div>
-          <h2 className="text-2xl md:text-3xl font-extrabold text-foreground mb-6">All-Time Performance</h2>
+          <h2 className="text-xl font-bold text-foreground mb-4">Email Performance - All-Time</h2>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card className="p-6 bg-card border-2 border-border shadow-xl">
+            <Card className="p-6 border-2">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-muted-foreground">Total Sent</p>
-                <Mail className="w-5 h-5 text-accent opacity-50" />
+                <Mail className="w-5 h-5 text-muted-foreground" />
               </div>
-              <p className="text-3xl font-bold text-foreground">{agent.performance?.total_sent || 0}</p>
+              <p className="text-2xl font-bold text-foreground">{agent.performance?.total_sent || 0}</p>
             </Card>
 
-            <Card className="p-6 bg-card border-2 border-border shadow-xl">
+            <Card className="p-6 border-2">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-muted-foreground">Total Opened</p>
-                <Eye className="w-5 h-5 text-accent opacity-50" />
+                <Eye className="w-5 h-5 text-muted-foreground" />
               </div>
-              <p className="text-3xl font-bold text-foreground">{agent.performance?.total_opened || 0}</p>
+              <p className="text-2xl font-bold text-foreground">{agent.performance?.total_opened || 0}</p>
               <p className="text-xs text-muted-foreground mt-1">
                 {agent.performance?.open_rate?.toFixed(1) || '0.0'}% open rate
               </p>
             </Card>
 
-            <Card className="p-6 bg-card border-2 border-border shadow-xl">
+            <Card className="p-6 border-2">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-muted-foreground">Total Replied</p>
-                <MessageSquare className="w-5 h-5 text-accent opacity-50" />
+                <MessageSquare className="w-5 h-5 text-muted-foreground" />
               </div>
-              <p className="text-3xl font-bold text-foreground">{agent.performance?.total_replied || 0}</p>
-              <p className="text-xs text-accent font-medium mt-1">
+              <p className="text-2xl font-bold text-foreground">{agent.performance?.total_replied || 0}</p>
+              <p className="text-xs text-muted-foreground mt-1">
                 {agent.performance?.reply_rate?.toFixed(1) || '0.0'}% reply rate
               </p>
             </Card>
 
-            <Card className="p-6 bg-card border-2 border-border shadow-xl">
+            <Card className="p-6 border-2">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-muted-foreground">Avg Response Time</p>
-                <Clock className="w-5 h-5 text-accent opacity-50" />
+                <Clock className="w-5 h-5 text-muted-foreground" />
               </div>
-              <p className="text-3xl font-bold text-foreground">
+              <p className="text-2xl font-bold text-foreground">
                 {agent.performance?.avg_hours_to_reply?.toFixed(1) || 'N/A'}
               </p>
               <p className="text-xs text-muted-foreground mt-1">hours</p>
@@ -306,28 +308,28 @@ export default function AgentDetailPage() {
           </div>
         </div>
 
-        {/* 30-Day Activity */}
+        {/* Email Activity - Last 30 Days */}
         <div>
-          <h2 className="text-2xl md:text-3xl font-extrabold text-foreground mb-6">Last 30 Days</h2>
+          <h2 className="text-xl font-bold text-foreground mb-4">Email Activity - Last 30 Days</h2>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card className="p-6 bg-card border-2 border-border shadow-xl">
+            <Card className="p-6 border-2">
               <p className="text-sm text-muted-foreground mb-2">Emails Sent</p>
               <p className="text-2xl font-bold text-foreground">{agent.activity30d?.emails_sent_30d || 0}</p>
             </Card>
 
-            <Card className="p-6 bg-card border-2 border-border shadow-xl">
+            <Card className="p-6 border-2">
               <p className="text-sm text-muted-foreground mb-2">Opened</p>
               <p className="text-2xl font-bold text-foreground">{agent.activity30d?.emails_opened_30d || 0}</p>
             </Card>
 
-            <Card className="p-6 bg-card border-2 border-border shadow-xl">
+            <Card className="p-6 border-2">
               <p className="text-sm text-muted-foreground mb-2">Replied</p>
               <p className="text-2xl font-bold text-foreground">{agent.activity30d?.emails_replied_30d || 0}</p>
             </Card>
 
-            <Card className="p-6 bg-card border-2 border-border shadow-xl">
+            <Card className="p-6 border-2">
               <p className="text-sm text-muted-foreground mb-2">Reply Rate</p>
-              <p className="text-2xl font-bold text-accent">
+              <p className="text-2xl font-bold text-foreground">
                 {agent.activity30d?.reply_rate_30d?.toFixed(1) || '0.0'}%
               </p>
             </Card>
@@ -336,45 +338,45 @@ export default function AgentDetailPage() {
 
         {/* Call Performance - All-Time */}
         <div>
-          <h2 className="text-2xl md:text-3xl font-extrabold text-foreground mb-6">Call Performance - All-Time</h2>
+          <h2 className="text-xl font-bold text-foreground mb-4">Call Performance - All-Time</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <Card className="p-6 bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-2 border-blue-500/30 shadow-xl">
+            <Card className="p-6 border-2">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-muted-foreground">Calls Made</p>
-                <Phone className="w-5 h-5 text-blue-500 opacity-50" />
+                <Phone className="w-5 h-5 text-muted-foreground" />
               </div>
-              <p className="text-3xl font-bold text-foreground">{agent.total_calls || 0}</p>
+              <p className="text-2xl font-bold text-foreground">{agent.total_calls || 0}</p>
               <div className="text-xs text-muted-foreground mt-1">
                 {agent.inbound_calls || 0} in / {agent.outbound_calls || 0} out
               </div>
             </Card>
 
-            <Card className="p-6 bg-gradient-to-br from-green-500/10 to-green-600/5 border-2 border-green-500/30 shadow-xl">
+            <Card className="p-6 border-2">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-muted-foreground">Pickup Rate</p>
-                <CheckCircle2 className="w-5 h-5 text-green-500 opacity-50" />
+                <CheckCircle2 className="w-5 h-5 text-muted-foreground" />
               </div>
-              <p className="text-3xl font-bold text-green-500">{agent.answer_rate?.toFixed(1) || '0.0'}%</p>
+              <p className="text-2xl font-bold text-foreground">{agent.answer_rate?.toFixed(1) || '0.0'}%</p>
               <div className="text-xs text-muted-foreground mt-1">
                 {agent.answered_calls || 0} answered
               </div>
             </Card>
 
-            <Card className="p-6 bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-2 border-amber-500/30 shadow-xl">
+            <Card className="p-6 border-2">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-muted-foreground">Avg Duration</p>
-                <Clock className="w-5 h-5 text-amber-500 opacity-50" />
+                <Clock className="w-5 h-5 text-muted-foreground" />
               </div>
-              <p className="text-3xl font-bold text-foreground">{formatDuration(agent.avg_duration || 0)}</p>
+              <p className="text-2xl font-bold text-foreground">{formatDuration(agent.avg_duration || 0)}</p>
               <div className="text-xs text-muted-foreground mt-1">per call</div>
             </Card>
 
-            <Card className="p-6 bg-card border-2 border-border shadow-xl">
+            <Card className="p-6 border-2">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-muted-foreground">Inbound</p>
-                <PhoneIncoming className="w-5 h-5 text-accent opacity-50" />
+                <PhoneIncoming className="w-5 h-5 text-muted-foreground" />
               </div>
-              <p className="text-3xl font-bold text-foreground">{agent.inbound_calls || 0}</p>
+              <p className="text-2xl font-bold text-foreground">{agent.inbound_calls || 0}</p>
               <p className="text-xs text-muted-foreground mt-1">
                 {agent.total_calls && agent.total_calls > 0
                   ? ((((agent.inbound_calls || 0) / agent.total_calls) * 100).toFixed(1))
@@ -382,12 +384,12 @@ export default function AgentDetailPage() {
               </p>
             </Card>
 
-            <Card className="p-6 bg-card border-2 border-border shadow-xl">
+            <Card className="p-6 border-2">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-muted-foreground">Outbound</p>
-                <PhoneOutgoing className="w-5 h-5 text-accent opacity-50" />
+                <PhoneOutgoing className="w-5 h-5 text-muted-foreground" />
               </div>
-              <p className="text-3xl font-bold text-foreground">{agent.outbound_calls || 0}</p>
+              <p className="text-2xl font-bold text-foreground">{agent.outbound_calls || 0}</p>
               <p className="text-xs text-muted-foreground mt-1">
                 {agent.total_calls && agent.total_calls > 0
                   ? ((((agent.outbound_calls || 0) / agent.total_calls) * 100).toFixed(1))
@@ -395,10 +397,10 @@ export default function AgentDetailPage() {
               </p>
             </Card>
 
-            <Card className="p-6 bg-card border-2 border-border shadow-xl">
+            <Card className="p-6 border-2">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-muted-foreground">Total Time</p>
-                <Zap className="w-5 h-5 text-accent opacity-50" />
+                <Clock className="w-5 h-5 text-muted-foreground" />
               </div>
               <p className="text-2xl font-bold text-foreground">
                 {Math.floor((agent.total_duration || 0) / 3600)}h {Math.floor(((agent.total_duration || 0) % 3600) / 60)}m
@@ -410,23 +412,23 @@ export default function AgentDetailPage() {
 
         {/* Call Activity - Last 30 Days */}
         <div>
-          <h2 className="text-2xl md:text-3xl font-extrabold text-foreground mb-6">Call Activity - Last 30 Days</h2>
+          <h2 className="text-xl font-bold text-foreground mb-4">Call Activity - Last 30 Days</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <Card className="p-6 bg-card border-2 border-border shadow-xl">
+            <Card className="p-6 border-2">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-muted-foreground">Calls Made</p>
-                <Phone className="w-4 h-4 text-muted-foreground opacity-50" />
+                <Phone className="w-5 h-5 text-muted-foreground" />
               </div>
               <p className="text-2xl font-bold text-foreground">{agent.calls_30d || 0}</p>
               <div className="text-xs text-muted-foreground mt-1">last 30 days</div>
             </Card>
 
-            <Card className="p-6 bg-card border-2 border-border shadow-xl">
+            <Card className="p-6 border-2">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-muted-foreground">Pickup Rate</p>
-                <CheckCircle2 className="w-4 h-4 text-accent opacity-50" />
+                <CheckCircle2 className="w-5 h-5 text-muted-foreground" />
               </div>
-              <p className="text-2xl font-bold text-accent">
+              <p className="text-2xl font-bold text-foreground">
                 {(agent.answer_rate_30d || 0).toFixed(1)}%
               </p>
               <div className="text-xs text-muted-foreground mt-1">
@@ -434,39 +436,39 @@ export default function AgentDetailPage() {
               </div>
             </Card>
 
-            <Card className="p-6 bg-card border-2 border-border shadow-xl">
+            <Card className="p-6 border-2">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-muted-foreground">Avg Duration</p>
-                <Clock className="w-4 h-4 text-muted-foreground opacity-50" />
+                <Clock className="w-5 h-5 text-muted-foreground" />
               </div>
               <p className="text-2xl font-bold text-foreground">{formatDuration(agent.avg_duration_30d || 0)}</p>
               <div className="text-xs text-muted-foreground mt-1">per call</div>
             </Card>
 
-            <Card className="p-6 bg-card border-2 border-border shadow-xl">
+            <Card className="p-6 border-2">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-muted-foreground">Inbound</p>
-                <PhoneIncoming className="w-4 h-4 text-muted-foreground opacity-50" />
+                <PhoneIncoming className="w-5 h-5 text-muted-foreground" />
               </div>
               <p className="text-2xl font-bold text-foreground">{agent.inbound_calls_30d || 0}</p>
               <p className="text-xs text-muted-foreground mt-1">received</p>
             </Card>
 
-            <Card className="p-6 bg-card border-2 border-border shadow-xl">
+            <Card className="p-6 border-2">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-muted-foreground">Outbound</p>
-                <PhoneOutgoing className="w-4 h-4 text-muted-foreground opacity-50" />
+                <PhoneOutgoing className="w-5 h-5 text-muted-foreground" />
               </div>
               <p className="text-2xl font-bold text-foreground">{agent.outbound_calls_30d || 0}</p>
               <p className="text-xs text-muted-foreground mt-1">dialed</p>
             </Card>
 
-            <Card className="p-6 bg-card border-2 border-border shadow-xl">
+            <Card className="p-6 border-2">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-muted-foreground">Total Time</p>
-                <Zap className="w-4 h-4 text-muted-foreground opacity-50" />
+                <Clock className="w-5 h-5 text-muted-foreground" />
               </div>
-              <p className="text-xl font-bold text-foreground">
+              <p className="text-2xl font-bold text-foreground">
                 {Math.floor((agent.total_duration_30d || 0) / 3600)}h {Math.floor(((agent.total_duration_30d || 0) % 3600) / 60)}m
               </p>
               <p className="text-xs text-muted-foreground mt-1">on calls</p>
@@ -477,23 +479,23 @@ export default function AgentDetailPage() {
         {/* Pipeline Performance */}
         {pipelinePerf && (
           <div>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl md:text-3xl font-extrabold text-foreground">Pipeline Performance</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-foreground">Pipeline Performance</h2>
               <Link href="/crm/pipeline">
-                <button className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl font-medium transition-all shadow-lg">
+                <button className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent/90 text-accent-foreground rounded-lg font-medium transition-colors">
                   <LayoutDashboard className="w-4 h-4" />
                   View Pipeline
                 </button>
               </Link>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card className="p-6 bg-gradient-to-br from-green-500/10 to-green-600/5 border-2 border-green-500/30 shadow-xl">
+              <Card className="p-6 border-2">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm text-muted-foreground">Active Deals</p>
-                  <LayoutDashboard className="w-5 h-5 text-green-500 opacity-50" />
+                  <LayoutDashboard className="w-5 h-5 text-muted-foreground" />
                 </div>
-                <p className="text-3xl font-bold text-foreground">{pipelinePerf.active_deals}</p>
-                <p className="text-xs text-green-500 font-medium mt-1">
+                <p className="text-2xl font-bold text-foreground">{pipelinePerf.active_deals}</p>
+                <p className="text-xs text-muted-foreground mt-1">
                   {new Intl.NumberFormat('en-US', {
                     style: 'currency',
                     currency: 'USD',
@@ -503,13 +505,13 @@ export default function AgentDetailPage() {
                 </p>
               </Card>
 
-              <Card className="p-6 bg-gradient-to-br from-green-500/10 to-green-600/5 border-2 border-green-500/30 shadow-xl">
+              <Card className="p-6 border-2">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm text-muted-foreground">Deals Won</p>
-                  <CheckCircle2 className="w-5 h-5 text-green-500 opacity-50" />
+                  <CheckCircle2 className="w-5 h-5 text-muted-foreground" />
                 </div>
-                <p className="text-3xl font-bold text-foreground">{pipelinePerf.total_won}</p>
-                <p className="text-xs text-green-500 font-medium mt-1">
+                <p className="text-2xl font-bold text-foreground">{pipelinePerf.total_won}</p>
+                <p className="text-xs text-muted-foreground mt-1">
                   {new Intl.NumberFormat('en-US', {
                     style: 'currency',
                     currency: 'USD',
@@ -519,21 +521,21 @@ export default function AgentDetailPage() {
                 </p>
               </Card>
 
-              <Card className="p-6 bg-gradient-to-br from-green-500/10 to-green-600/5 border-2 border-green-500/30 shadow-xl">
+              <Card className="p-6 border-2">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm text-muted-foreground">Conversion Rate</p>
-                  <Target className="w-5 h-5 text-green-500 opacity-50" />
+                  <Target className="w-5 h-5 text-muted-foreground" />
                 </div>
-                <p className="text-3xl font-bold text-green-500">{pipelinePerf.conversion_rate}%</p>
+                <p className="text-2xl font-bold text-foreground">{pipelinePerf.conversion_rate}%</p>
                 <p className="text-xs text-muted-foreground mt-1">{pipelinePerf.total_lost} lost</p>
               </Card>
 
-              <Card className="p-6 bg-gradient-to-br from-green-500/10 to-green-600/5 border-2 border-green-500/30 shadow-xl">
+              <Card className="p-6 border-2">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm text-muted-foreground">Avg Days to Close</p>
-                  <Clock className="w-5 h-5 text-green-500 opacity-50" />
+                  <Clock className="w-5 h-5 text-muted-foreground" />
                 </div>
-                <p className="text-3xl font-bold text-foreground">
+                <p className="text-2xl font-bold text-foreground">
                   {pipelinePerf.avg_days_to_close || 'N/A'}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">days average</p>
@@ -544,24 +546,24 @@ export default function AgentDetailPage() {
 
         {/* Email History */}
         <div>
-          <h2 className="text-2xl md:text-3xl font-extrabold text-foreground mb-6">Email History</h2>
-          <Card className="bg-card border-2 border-border shadow-xl overflow-hidden">
+          <h2 className="text-xl font-bold text-foreground mb-4">Email History</h2>
+          <Card className="border overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-muted border-b-2 border-border">
+                <thead className="bg-muted/50 border-b">
                   <tr>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Property</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Offer Type</th>
-                    <th className="px-4 py-3 text-right text-sm font-semibold text-foreground">Price</th>
-                    <th className="px-4 py-3 text-center text-sm font-semibold text-foreground">Status</th>
-                    <th className="px-4 py-3 text-center text-sm font-semibold text-foreground">Engagement</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Sent</th>
+                    <th className="px-6 py-3 text-left text-sm font-medium text-foreground">Property</th>
+                    <th className="px-6 py-3 text-left text-sm font-medium text-foreground">Offer Type</th>
+                    <th className="px-6 py-3 text-right text-sm font-medium text-foreground">Price</th>
+                    <th className="px-6 py-3 text-center text-sm font-medium text-foreground">Status</th>
+                    <th className="px-6 py-3 text-center text-sm font-medium text-foreground">Engagement</th>
+                    <th className="px-6 py-3 text-left text-sm font-medium text-foreground">Sent</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border">
+                <tbody className="divide-y">
                   {agent.emails.slice(0, 20).map((email, index) => (
                     <tr key={index} className="hover:bg-muted/50 transition-colors">
-                      <td className="px-4 py-3">
+                      <td className="px-6 py-4">
                         <p className="font-medium text-sm text-foreground">{email.property_address}</p>
                         {email.realtor_email_response && (
                           <p className="text-xs text-muted-foreground mt-1">
@@ -569,29 +571,29 @@ export default function AgentDetailPage() {
                           </p>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-sm text-muted-foreground">{email.offer_type}</td>
-                      <td className="px-4 py-3 text-right text-sm font-medium text-foreground">
+                      <td className="px-6 py-4 text-sm text-muted-foreground">{email.offer_type}</td>
+                      <td className="px-6 py-4 text-right text-sm font-medium text-foreground">
                         ${email.offer_price.toLocaleString()}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-2">
                           {getStatusIcon(email)}
                           <span className="text-sm text-foreground">{getStatusText(email)}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-center text-sm">
+                      <td className="px-6 py-4 text-center text-sm">
                         <div className="flex gap-3 justify-center">
                           <span className="text-muted-foreground">
                             {email.open_count} opens
                           </span>
                           {email.click_count > 0 && (
-                            <span className="text-accent">
+                            <span className="text-muted-foreground">
                               {email.click_count} clicks
                             </span>
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-sm text-muted-foreground">
+                      <td className="px-6 py-4 text-sm text-muted-foreground">
                         {formatRelativeTime(email.sent_at)}
                       </td>
                     </tr>
@@ -612,22 +614,22 @@ export default function AgentDetailPage() {
         {/* Recent Replies */}
         {agent.replies && agent.replies.length > 0 && (
           <div>
-            <h2 className="text-2xl md:text-3xl font-extrabold text-foreground mb-6">
+            <h2 className="text-xl font-bold text-foreground mb-4">
               Recent Replies ({agent.replies.length})
             </h2>
             <div className="space-y-4">
               {agent.replies.slice(0, 5).map((reply, index) => (
-                <Card key={index} className="p-6 bg-card border-2 border-border shadow-xl">
+                <Card key={index} className="p-6 border-2">
                   <div className="flex items-start justify-between mb-4">
                     <div>
-                      <p className="font-semibold text-foreground text-lg">{reply.subject}</p>
+                      <p className="font-semibold text-foreground">{reply.subject}</p>
                       <p className="text-sm text-muted-foreground mt-1">From: {reply.from_email}</p>
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {formatDate(reply.received_at)}
                     </p>
                   </div>
-                  <div className="text-sm text-muted-foreground bg-muted p-4 rounded-lg max-h-32 overflow-y-auto border border-border">
+                  <div className="text-sm text-muted-foreground bg-muted p-4 rounded-lg max-h-32 overflow-y-auto border">
                     {reply.text_content || '(No text content)'}
                   </div>
                 </Card>
