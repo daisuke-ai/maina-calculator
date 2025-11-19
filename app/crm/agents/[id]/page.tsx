@@ -64,6 +64,15 @@ interface AgentData {
   total_duration?: number
   avg_duration?: number
   answer_rate?: number
+  // Call metrics - 7-day
+  calls_7d?: number
+  inbound_calls_7d?: number
+  outbound_calls_7d?: number
+  answered_calls_7d?: number
+  missed_calls_7d?: number
+  total_duration_7d?: number
+  avg_duration_7d?: number
+  answer_rate_7d?: number
   // Call metrics - 30-day
   calls_30d?: number
   inbound_calls_30d?: number
@@ -73,6 +82,24 @@ interface AgentData {
   total_duration_30d?: number
   avg_duration_30d?: number
   answer_rate_30d?: number
+  // Call metrics - 90-day (quarter)
+  calls_90d?: number
+  inbound_calls_90d?: number
+  outbound_calls_90d?: number
+  answered_calls_90d?: number
+  missed_calls_90d?: number
+  total_duration_90d?: number
+  avg_duration_90d?: number
+  answer_rate_90d?: number
+  // Call metrics - 365-day (year)
+  calls_365d?: number
+  inbound_calls_365d?: number
+  outbound_calls_365d?: number
+  answered_calls_365d?: number
+  missed_calls_365d?: number
+  total_duration_365d?: number
+  avg_duration_365d?: number
+  answer_rate_365d?: number
   emails: Array<{
     property_address: string
     offer_type: string
@@ -95,6 +122,8 @@ interface AgentData {
   }>
 }
 
+type TimeRange = '7d' | '30d' | '90d' | '365d' | 'all'
+
 interface AgentPipelinePerformance {
   active_deals: number
   total_won: number
@@ -113,6 +142,7 @@ export default function AgentDetailPage() {
   const [pipelinePerf, setPipelinePerf] = useState<AgentPipelinePerformance | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [timeRange, setTimeRange] = useState<TimeRange>('30d')
 
   useEffect(() => {
     fetchAgentData()
@@ -194,6 +224,81 @@ export default function AgentDetailPage() {
     if (email.replied) return 'Replied'
     if (email.opened) return 'Opened'
     return 'Sent'
+  }
+
+  // Get call stats based on selected time range
+  const getCallStats = () => {
+    if (!agent) return null
+
+    switch (timeRange) {
+      case '7d':
+        return {
+          total_calls: agent.calls_7d || 0,
+          inbound_calls: agent.inbound_calls_7d || 0,
+          outbound_calls: agent.outbound_calls_7d || 0,
+          answered_calls: agent.answered_calls_7d || 0,
+          missed_calls: agent.missed_calls_7d || 0,
+          total_duration: agent.total_duration_7d || 0,
+          avg_duration: agent.avg_duration_7d || 0,
+          answer_rate: agent.answer_rate_7d || 0,
+        }
+      case '30d':
+        return {
+          total_calls: agent.calls_30d || 0,
+          inbound_calls: agent.inbound_calls_30d || 0,
+          outbound_calls: agent.outbound_calls_30d || 0,
+          answered_calls: agent.answered_calls_30d || 0,
+          missed_calls: agent.missed_calls_30d || 0,
+          total_duration: agent.total_duration_30d || 0,
+          avg_duration: agent.avg_duration_30d || 0,
+          answer_rate: agent.answer_rate_30d || 0,
+        }
+      case '90d':
+        return {
+          total_calls: agent.calls_90d || 0,
+          inbound_calls: agent.inbound_calls_90d || 0,
+          outbound_calls: agent.outbound_calls_90d || 0,
+          answered_calls: agent.answered_calls_90d || 0,
+          missed_calls: agent.missed_calls_90d || 0,
+          total_duration: agent.total_duration_90d || 0,
+          avg_duration: agent.avg_duration_90d || 0,
+          answer_rate: agent.answer_rate_90d || 0,
+        }
+      case '365d':
+        return {
+          total_calls: agent.calls_365d || 0,
+          inbound_calls: agent.inbound_calls_365d || 0,
+          outbound_calls: agent.outbound_calls_365d || 0,
+          answered_calls: agent.answered_calls_365d || 0,
+          missed_calls: agent.missed_calls_365d || 0,
+          total_duration: agent.total_duration_365d || 0,
+          avg_duration: agent.avg_duration_365d || 0,
+          answer_rate: agent.answer_rate_365d || 0,
+        }
+      case 'all':
+      default:
+        return {
+          total_calls: agent.total_calls || 0,
+          inbound_calls: agent.inbound_calls || 0,
+          outbound_calls: agent.outbound_calls || 0,
+          answered_calls: agent.answered_calls || 0,
+          missed_calls: agent.missed_calls || 0,
+          total_duration: agent.total_duration || 0,
+          avg_duration: agent.avg_duration || 0,
+          answer_rate: agent.answer_rate || 0,
+        }
+    }
+  }
+
+  const getTimeRangeLabel = () => {
+    switch (timeRange) {
+      case '7d': return 'Last 7 Days'
+      case '30d': return 'Last 30 Days'
+      case '90d': return 'Last Quarter'
+      case '365d': return 'Last Year'
+      case 'all': return 'All-Time'
+      default: return 'Last 30 Days'
+    }
   }
 
   if (loading) {
@@ -336,91 +441,73 @@ export default function AgentDetailPage() {
           </div>
         </div>
 
-        {/* Call Performance - All-Time */}
+        {/* Call Performance with Time Range Selector */}
         <div>
-          <h2 className="text-xl font-bold text-foreground mb-4">Call Performance - All-Time</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <Card className="p-6 border-2">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm text-muted-foreground">Calls Made</p>
-                <Phone className="w-5 h-5 text-muted-foreground" />
-              </div>
-              <p className="text-2xl font-bold text-foreground">{agent.total_calls || 0}</p>
-              <div className="text-xs text-muted-foreground mt-1">
-                {agent.inbound_calls || 0} in / {agent.outbound_calls || 0} out
-              </div>
-            </Card>
-
-            <Card className="p-6 border-2">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm text-muted-foreground">Pickup Rate</p>
-                <CheckCircle2 className="w-5 h-5 text-muted-foreground" />
-              </div>
-              <p className="text-2xl font-bold text-foreground">{agent.answer_rate?.toFixed(1) || '0.0'}%</p>
-              <div className="text-xs text-muted-foreground mt-1">
-                {agent.answered_calls || 0} answered
-              </div>
-            </Card>
-
-            <Card className="p-6 border-2">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm text-muted-foreground">Avg Duration</p>
-                <Clock className="w-5 h-5 text-muted-foreground" />
-              </div>
-              <p className="text-2xl font-bold text-foreground">{formatDuration(agent.avg_duration || 0)}</p>
-              <div className="text-xs text-muted-foreground mt-1">per call</div>
-            </Card>
-
-            <Card className="p-6 border-2">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm text-muted-foreground">Inbound</p>
-                <PhoneIncoming className="w-5 h-5 text-muted-foreground" />
-              </div>
-              <p className="text-2xl font-bold text-foreground">{agent.inbound_calls || 0}</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {agent.total_calls && agent.total_calls > 0
-                  ? ((((agent.inbound_calls || 0) / agent.total_calls) * 100).toFixed(1))
-                  : '0.0'}% of total
-              </p>
-            </Card>
-
-            <Card className="p-6 border-2">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm text-muted-foreground">Outbound</p>
-                <PhoneOutgoing className="w-5 h-5 text-muted-foreground" />
-              </div>
-              <p className="text-2xl font-bold text-foreground">{agent.outbound_calls || 0}</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {agent.total_calls && agent.total_calls > 0
-                  ? ((((agent.outbound_calls || 0) / agent.total_calls) * 100).toFixed(1))
-                  : '0.0'}% of total
-              </p>
-            </Card>
-
-            <Card className="p-6 border-2">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm text-muted-foreground">Total Time</p>
-                <Clock className="w-5 h-5 text-muted-foreground" />
-              </div>
-              <p className="text-2xl font-bold text-foreground">
-                {Math.floor((agent.total_duration || 0) / 3600)}h {Math.floor(((agent.total_duration || 0) % 3600) / 60)}m
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">on calls</p>
-            </Card>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-foreground">Call Performance - {getTimeRangeLabel()}</h2>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setTimeRange('7d')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  timeRange === '7d'
+                    ? 'bg-accent text-accent-foreground'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                }`}
+              >
+                7 Days
+              </button>
+              <button
+                onClick={() => setTimeRange('30d')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  timeRange === '30d'
+                    ? 'bg-accent text-accent-foreground'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                }`}
+              >
+                30 Days
+              </button>
+              <button
+                onClick={() => setTimeRange('90d')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  timeRange === '90d'
+                    ? 'bg-accent text-accent-foreground'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                }`}
+              >
+                Quarter
+              </button>
+              <button
+                onClick={() => setTimeRange('365d')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  timeRange === '365d'
+                    ? 'bg-accent text-accent-foreground'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                }`}
+              >
+                Year
+              </button>
+              <button
+                onClick={() => setTimeRange('all')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  timeRange === 'all'
+                    ? 'bg-accent text-accent-foreground'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                }`}
+              >
+                All-Time
+              </button>
+            </div>
           </div>
-        </div>
-
-        {/* Call Activity - Last 30 Days */}
-        <div>
-          <h2 className="text-xl font-bold text-foreground mb-4">Call Activity - Last 30 Days</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <Card className="p-6 border-2">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-muted-foreground">Calls Made</p>
                 <Phone className="w-5 h-5 text-muted-foreground" />
               </div>
-              <p className="text-2xl font-bold text-foreground">{agent.calls_30d || 0}</p>
-              <div className="text-xs text-muted-foreground mt-1">last 30 days</div>
+              <p className="text-2xl font-bold text-foreground">{getCallStats()?.total_calls || 0}</p>
+              <div className="text-xs text-muted-foreground mt-1">
+                {getCallStats()?.inbound_calls || 0} in / {getCallStats()?.outbound_calls || 0} out
+              </div>
             </Card>
 
             <Card className="p-6 border-2">
@@ -428,11 +515,9 @@ export default function AgentDetailPage() {
                 <p className="text-sm text-muted-foreground">Pickup Rate</p>
                 <CheckCircle2 className="w-5 h-5 text-muted-foreground" />
               </div>
-              <p className="text-2xl font-bold text-foreground">
-                {(agent.answer_rate_30d || 0).toFixed(1)}%
-              </p>
+              <p className="text-2xl font-bold text-foreground">{getCallStats()?.answer_rate?.toFixed(1) || '0.0'}%</p>
               <div className="text-xs text-muted-foreground mt-1">
-                {agent.answered_calls_30d || 0} answered
+                {getCallStats()?.answered_calls || 0} answered
               </div>
             </Card>
 
@@ -441,7 +526,7 @@ export default function AgentDetailPage() {
                 <p className="text-sm text-muted-foreground">Avg Duration</p>
                 <Clock className="w-5 h-5 text-muted-foreground" />
               </div>
-              <p className="text-2xl font-bold text-foreground">{formatDuration(agent.avg_duration_30d || 0)}</p>
+              <p className="text-2xl font-bold text-foreground">{formatDuration(getCallStats()?.avg_duration || 0)}</p>
               <div className="text-xs text-muted-foreground mt-1">per call</div>
             </Card>
 
@@ -450,8 +535,12 @@ export default function AgentDetailPage() {
                 <p className="text-sm text-muted-foreground">Inbound</p>
                 <PhoneIncoming className="w-5 h-5 text-muted-foreground" />
               </div>
-              <p className="text-2xl font-bold text-foreground">{agent.inbound_calls_30d || 0}</p>
-              <p className="text-xs text-muted-foreground mt-1">received</p>
+              <p className="text-2xl font-bold text-foreground">{getCallStats()?.inbound_calls || 0}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {getCallStats()?.total_calls && (getCallStats()?.total_calls || 0) > 0
+                  ? (((getCallStats()?.inbound_calls || 0) / (getCallStats()?.total_calls || 1)) * 100).toFixed(1)
+                  : '0.0'}% of total
+              </p>
             </Card>
 
             <Card className="p-6 border-2">
@@ -459,8 +548,12 @@ export default function AgentDetailPage() {
                 <p className="text-sm text-muted-foreground">Outbound</p>
                 <PhoneOutgoing className="w-5 h-5 text-muted-foreground" />
               </div>
-              <p className="text-2xl font-bold text-foreground">{agent.outbound_calls_30d || 0}</p>
-              <p className="text-xs text-muted-foreground mt-1">dialed</p>
+              <p className="text-2xl font-bold text-foreground">{getCallStats()?.outbound_calls || 0}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {getCallStats()?.total_calls && (getCallStats()?.total_calls || 0) > 0
+                  ? (((getCallStats()?.outbound_calls || 0) / (getCallStats()?.total_calls || 1)) * 100).toFixed(1)
+                  : '0.0'}% of total
+              </p>
             </Card>
 
             <Card className="p-6 border-2">
@@ -469,7 +562,7 @@ export default function AgentDetailPage() {
                 <Clock className="w-5 h-5 text-muted-foreground" />
               </div>
               <p className="text-2xl font-bold text-foreground">
-                {Math.floor((agent.total_duration_30d || 0) / 3600)}h {Math.floor(((agent.total_duration_30d || 0) % 3600) / 60)}m
+                {Math.floor((getCallStats()?.total_duration || 0) / 3600)}h {Math.floor(((getCallStats()?.total_duration || 0) % 3600) / 60)}m
               </p>
               <p className="text-xs text-muted-foreground mt-1">on calls</p>
             </Card>

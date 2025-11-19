@@ -297,8 +297,9 @@ export async function getTopAgents(limit: number = 10) {
 
 /**
  * Get combined agent stats (performance + 30d activity + call metrics)
+ * Supports time ranges: 7, 30, 90 (quarter), 365 (year)
  */
-export async function getAgentCombinedStats(agentId: number) {
+export async function getAgentCombinedStats(agentId: number, timeRange?: number) {
   try {
     const [
       performance,
@@ -306,7 +307,10 @@ export async function getAgentCombinedStats(agentId: number) {
       emails,
       replies,
       callPerformance,
-      callActivity30d
+      callActivity30d,
+      callActivity7d,
+      callActivity90d,
+      callActivity365d
     ] = await Promise.all([
       getAgentDetails(agentId),
       supabase
@@ -328,11 +332,26 @@ export async function getAgentCombinedStats(agentId: number) {
         .select('*')
         .eq('agent_id', agentId)
         .single(),
+      // Fetch 7-day call activity
+      supabase
+        .rpc('get_agent_call_activity_by_range', { days_back: 7 })
+        .then(res => res.data?.find((a: any) => a.agent_id === agentId) || null),
+      // Fetch 90-day call activity (quarter)
+      supabase
+        .rpc('get_agent_call_activity_by_range', { days_back: 90 })
+        .then(res => res.data?.find((a: any) => a.agent_id === agentId) || null),
+      // Fetch 365-day call activity (year)
+      supabase
+        .rpc('get_agent_call_activity_by_range', { days_back: 365 })
+        .then(res => res.data?.find((a: any) => a.agent_id === agentId) || null),
     ]);
 
     // Extract call metrics from the fetched data
     const callData = callPerformance.data || {};
     const call30d = callActivity30d.data || {};
+    const call7d = callActivity7d || {};
+    const call90d = callActivity90d || {};
+    const call365d = callActivity365d || {};
 
     return {
       performance,
@@ -348,6 +367,15 @@ export async function getAgentCombinedStats(agentId: number) {
       total_duration: callData.total_duration || 0,
       avg_duration: callData.avg_duration || 0,
       answer_rate: callData.answer_rate || 0,
+      // Add 7-day call metrics
+      calls_7d: call7d.total_calls || 0,
+      inbound_calls_7d: call7d.inbound_calls || 0,
+      outbound_calls_7d: call7d.outbound_calls || 0,
+      answered_calls_7d: call7d.answered_calls || 0,
+      missed_calls_7d: call7d.missed_calls || 0,
+      total_duration_7d: call7d.total_duration || 0,
+      avg_duration_7d: call7d.avg_duration || 0,
+      answer_rate_7d: call7d.answer_rate || 0,
       // Add 30-day call metrics
       calls_30d: call30d.calls_30d || 0,
       inbound_calls_30d: call30d.inbound_calls_30d || 0,
@@ -357,6 +385,24 @@ export async function getAgentCombinedStats(agentId: number) {
       total_duration_30d: call30d.total_duration_30d || 0,
       avg_duration_30d: call30d.avg_duration_30d || 0,
       answer_rate_30d: call30d.answer_rate_30d || 0,
+      // Add 90-day call metrics (quarter)
+      calls_90d: call90d.total_calls || 0,
+      inbound_calls_90d: call90d.inbound_calls || 0,
+      outbound_calls_90d: call90d.outbound_calls || 0,
+      answered_calls_90d: call90d.answered_calls || 0,
+      missed_calls_90d: call90d.missed_calls || 0,
+      total_duration_90d: call90d.total_duration || 0,
+      avg_duration_90d: call90d.avg_duration || 0,
+      answer_rate_90d: call90d.answer_rate || 0,
+      // Add 365-day call metrics (year)
+      calls_365d: call365d.total_calls || 0,
+      inbound_calls_365d: call365d.inbound_calls || 0,
+      outbound_calls_365d: call365d.outbound_calls || 0,
+      answered_calls_365d: call365d.answered_calls || 0,
+      missed_calls_365d: call365d.missed_calls || 0,
+      total_duration_365d: call365d.total_duration || 0,
+      avg_duration_365d: call365d.avg_duration || 0,
+      answer_rate_365d: call365d.answer_rate || 0,
     };
   } catch (error) {
     console.error('[getAgentCombinedStats Error]', error);
@@ -374,6 +420,16 @@ export async function getAgentCombinedStats(agentId: number) {
       total_duration: 0,
       avg_duration: 0,
       answer_rate: 0,
+      // 7-day
+      calls_7d: 0,
+      inbound_calls_7d: 0,
+      outbound_calls_7d: 0,
+      answered_calls_7d: 0,
+      missed_calls_7d: 0,
+      total_duration_7d: 0,
+      avg_duration_7d: 0,
+      answer_rate_7d: 0,
+      // 30-day
       calls_30d: 0,
       inbound_calls_30d: 0,
       outbound_calls_30d: 0,
@@ -382,6 +438,24 @@ export async function getAgentCombinedStats(agentId: number) {
       total_duration_30d: 0,
       avg_duration_30d: 0,
       answer_rate_30d: 0,
+      // 90-day
+      calls_90d: 0,
+      inbound_calls_90d: 0,
+      outbound_calls_90d: 0,
+      answered_calls_90d: 0,
+      missed_calls_90d: 0,
+      total_duration_90d: 0,
+      avg_duration_90d: 0,
+      answer_rate_90d: 0,
+      // 365-day
+      calls_365d: 0,
+      inbound_calls_365d: 0,
+      outbound_calls_365d: 0,
+      answered_calls_365d: 0,
+      missed_calls_365d: 0,
+      total_duration_365d: 0,
+      avg_duration_365d: 0,
+      answer_rate_365d: 0,
     };
   }
 }
