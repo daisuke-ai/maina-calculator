@@ -207,13 +207,14 @@ export class SellerFinanceCalculator {
     offer_price: number,
     property_data: PropertyData,
     target_yield_range: [number, number]
-  ): { down_payment_percent: number; entry_fee_amount: number } {
+  ): { down_payment_percent: number; entry_fee_amount: number; is_valid: boolean } {
     const min_down_payment_percent = 5.0  // 5% minimum
     const max_down_payment_percent = 10.0 // 10% maximum
     const max_entry_fee_percent = 20.0    // 20% maximum entry fee
     let best_down_payment_percent = min_down_payment_percent
     let best_entry_fee_amount = 0
     let best_score = -Infinity
+    let found_valid_option = false
 
     // Test different down payment percentages in 0.5% increments
     for (let dp_percent = min_down_payment_percent; dp_percent <= max_down_payment_percent; dp_percent += 0.5) {
@@ -230,6 +231,7 @@ export class SellerFinanceCalculator {
         continue
       }
 
+      found_valid_option = true
       const loan_amount = offer_price - down_payment
 
       // Find optimal amortization for this down payment
@@ -260,7 +262,8 @@ export class SellerFinanceCalculator {
 
     return {
       down_payment_percent: best_down_payment_percent,
-      entry_fee_amount: best_entry_fee_amount
+      entry_fee_amount: best_entry_fee_amount,
+      is_valid: found_valid_option
     }
   }
 
@@ -278,11 +281,20 @@ export class SellerFinanceCalculator {
     const appreciation_profit = future_value - offer_price
 
     // OPTIMIZATION #9: Find optimal down payment (5-10%)
-    const { down_payment_percent, entry_fee_amount } = this.findOptimalDownPayment(
+    const { down_payment_percent, entry_fee_amount, is_valid } = this.findOptimalDownPayment(
       offer_price,
       property_data,
       offer_cfg.net_rental_yield_range
     )
+
+    // If no valid down payment found, return unbuyable offer
+    if (!is_valid) {
+      return this.createUnbuyableOffer(
+        'Max Owner Favored',
+        offer_price,
+        'Entry fee constraint cannot be satisfied - fixed costs too high relative to offer price'
+      )
+    }
 
     // Calculate down payment and loan from optimized percentage
     const closing_cost = offer_price * this.config.closing_cost_percent_of_offer
@@ -330,11 +342,20 @@ export class SellerFinanceCalculator {
     const appreciation_profit = future_value - offer_price
 
     // OPTIMIZATION #9: Find optimal down payment (5-10%)
-    const { down_payment_percent, entry_fee_amount } = this.findOptimalDownPayment(
+    const { down_payment_percent, entry_fee_amount, is_valid } = this.findOptimalDownPayment(
       offer_price,
       property_data,
       offer_cfg.net_rental_yield_range
     )
+
+    // If no valid down payment found, return unbuyable offer
+    if (!is_valid) {
+      return this.createUnbuyableOffer(
+        'Max Buyer Favored',
+        offer_price,
+        'Entry fee constraint cannot be satisfied - fixed costs too high relative to offer price'
+      )
+    }
 
     // Calculate down payment and loan from optimized percentage
     const closing_cost = offer_price * this.config.closing_cost_percent_of_offer
@@ -383,11 +404,20 @@ export class SellerFinanceCalculator {
     const appreciation_profit = future_value - offer_price
 
     // OPTIMIZATION #9: Find optimal down payment (5-10%)
-    const { down_payment_percent, entry_fee_amount } = this.findOptimalDownPayment(
+    const { down_payment_percent, entry_fee_amount, is_valid } = this.findOptimalDownPayment(
       offer_price,
       property_data,
       offer_cfg.net_rental_yield_range
     )
+
+    // If no valid down payment found, return unbuyable offer
+    if (!is_valid) {
+      return this.createUnbuyableOffer(
+        'Balanced',
+        offer_price,
+        'Entry fee constraint cannot be satisfied - fixed costs too high relative to offer price'
+      )
+    }
 
     // Calculate down payment and loan from optimized percentage
     const closing_cost = offer_price * this.config.closing_cost_percent_of_offer
@@ -488,6 +518,36 @@ export class SellerFinanceCalculator {
       amortization_years: amortization_years,
       principal_paid,
       balloon_payment,
+    }
+  }
+
+  private createUnbuyableOffer(
+    offer_type: OfferResult['offer_type'],
+    offer_price: number,
+    reason: string
+  ): OfferResult {
+    return {
+      offer_type,
+      is_buyable: false,
+      unbuyable_reason: reason,
+      deal_viability: 'not_viable',
+      viability_reasons: [reason],
+      final_offer_price: offer_price,
+      final_coc_percent: 0,
+      final_monthly_cash_flow: 0,
+      net_rental_yield: 0,
+      final_entry_fee_percent: 0,
+      final_entry_fee_amount: 0,
+      down_payment: 0,
+      down_payment_percent: 0,
+      loan_amount: 0,
+      monthly_payment: 0,
+      balloon_period: 0,
+      appreciation_profit: 0,
+      rehab_cost: 6000,
+      amortization_years: 0,
+      principal_paid: 0,
+      balloon_payment: 0,
     }
   }
 }
