@@ -10,104 +10,8 @@ export class SellerFinanceCalculator {
   }
 
   /**
-   * OPTIMIZATION #7: Get intelligent bounds for amortization search based on loan size and rent
-   */
-  private getAmortizationBounds(loan_amount: number, monthly_rent: number): { min_years: number; max_years: number } {
-    let min_years = 1
-    let max_years = this.config.max_amortization_years
-
-    // Smaller loans don't need long amortization
-    if (loan_amount < 50000) {
-      max_years = Math.min(15, max_years)
-    } else if (loan_amount < 100000) {
-      max_years = Math.min(25, max_years)
-    } else if (loan_amount < 200000) {
-      max_years = Math.min(30, max_years)
-    }
-
-    // High rent properties can handle shorter minimum amortization
-    if (monthly_rent > 4000) {
-      min_years = Math.max(5, min_years)
-    } else if (monthly_rent > 2500) {
-      min_years = Math.max(3, min_years)
-    }
-
-    // Ensure minimum cash flow is possible (max 60% of rent for mortgage)
-    const max_payment = monthly_rent * 0.6
-    const min_required_years = Math.ceil(loan_amount / (max_payment * 12))
-    min_years = Math.max(min_years, min_required_years)
-
-    // Ensure bounds are valid
-    if (min_years > max_years) {
-      max_years = Math.min(this.config.max_amortization_years, min_years + 5)
-    }
-
-    return { min_years, max_years }
-  }
-
-  /**
-   * OPTIMIZATION #2: Calculate comprehensive score for multi-objective optimization
-   * Weights: 70% yield, 20% cash flow, 10% amortization speed
-   */
-  private calculateOfferScore(
-    net_rental_yield: number,
-    monthly_cash_flow: number,
-    amortization_years: number,
-    target_yield_range: [number, number]
-  ): number {
-    const [min_yield, max_yield] = target_yield_range
-    const target_yield = (min_yield + max_yield) / 2
-    const allowable_deviation = 2.0 // Allow ±2% deviation from range
-
-    // Normalize yield score (0-100)
-    let yield_score = 0
-    if (net_rental_yield < min_yield - allowable_deviation) {
-      // Too far below range: penalize heavily
-      yield_score = Math.max(0, 50 * (1 - (min_yield - net_rental_yield - allowable_deviation) / 5))
-    } else if (net_rental_yield < min_yield) {
-      // Slightly below range: still acceptable but less than perfect
-      const deviation = min_yield - net_rental_yield
-      yield_score = 85 - (deviation / allowable_deviation) * 15
-    } else if (net_rental_yield > max_yield + allowable_deviation) {
-      // Too far above range: still good but not necessary
-      yield_score = Math.min(100, 80 + 20 * Math.exp(-(net_rental_yield - max_yield - allowable_deviation) / 5))
-    } else if (net_rental_yield > max_yield) {
-      // Slightly above range: excellent
-      const deviation = net_rental_yield - max_yield
-      yield_score = 95 + (deviation / allowable_deviation) * 5
-    } else {
-      // Within range: score based on distance from target
-      const range_size = max_yield - min_yield
-      const distance_from_target = Math.abs(net_rental_yield - target_yield)
-      yield_score = 100 - (distance_from_target / range_size) * 15
-    }
-
-    // Normalize cash flow score (0-100)
-    let cashflow_score = 0
-    if (monthly_cash_flow < 100) {
-      cashflow_score = 0
-    } else if (monthly_cash_flow < 200) {
-      cashflow_score = 30 + (monthly_cash_flow - 100) * 0.3
-    } else if (monthly_cash_flow < 500) {
-      cashflow_score = 60 + (monthly_cash_flow - 200) * 0.1
-    } else {
-      cashflow_score = Math.min(100, 90 + (monthly_cash_flow - 500) * 0.02)
-    }
-
-    // Normalize amortization score (prefer shorter terms)
-    const amort_score = Math.max(0, 100 - (amortization_years / this.config.max_amortization_years) * 100)
-
-    // Weighted combination: 70% yield, 20% cash flow, 10% amortization
-    return (
-      yield_score * 0.70 +
-      cashflow_score * 0.20 +
-      amort_score * 0.10
-    )
-  }
-
-  /**
-   * OPTIMIZATION #1: Find optimal amortization using binary search with multi-objective optimization
-   * This is 85% faster than the original linear search
+   * Find the best amortization period (1-40 years) that targets the net rental yield range.
+   * Returns the amortization period in years and the resulting monthly payment.
    */
   private findOptimalAmortization(
     loan_amount: number,
@@ -116,140 +20,49 @@ export class SellerFinanceCalculator {
     target_yield_range: [number, number]
   ): { amortization_years: number; monthly_payment: number; net_rental_yield: number } {
     const [min_yield, max_yield] = target_yield_range
+    const target_yield = (min_yield + max_yield) / 2 // Target the middle of the range
 
-    // Get intelligent bounds
-    const { min_years, max_years } = this.getAmortizationBounds(loan_amount, property_data.monthly_rent)
+    let best_amortization = this.config.max_amortization_years
+    let best_payment = loan_amount / (best_amortization * 12)
+    let best_yield = 0
+    let best_diff = Infinity
 
-    // Helper function to calculate metrics at given amortization
-    const calculateMetrics = (years: number) => {
+    // Try different amortization periods from 1 to 40 years
+    for (let years = 1; years <= this.config.max_amortization_years; years++) {
       const monthly_payment = loan_amount / (years * 12)
+
+      // Calculate net rental yield for this payment
       const annual_gross_rent = property_data.monthly_rent * 12
       const annual_operating_expenses = this.utils.calculateOperatingExpenses(property_data, monthly_payment) * 12
       const annual_net_income = annual_gross_rent - annual_operating_expenses
       const net_rental_yield = this.utils.calculateNetRentalYield(annual_net_income, entry_fee_amount)
-      const non_debt_expenses = this.utils.calculateNonDebtExpenses(property_data)
-      const monthly_cash_flow = property_data.monthly_rent - non_debt_expenses - monthly_payment
 
-      return { net_rental_yield, monthly_cash_flow, monthly_payment }
-    }
+      // Check if this is closer to our target
+      const diff = Math.abs(net_rental_yield - target_yield)
 
-    // Binary search with scoring
-    let low = min_years
-    let high = max_years
-    let best_years = min_years
-    let best_score = -Infinity
-    let best_result = calculateMetrics(min_years)
-
-    while (low <= high) {
-      const mid = Math.floor((low + high) / 2)
-      const result = calculateMetrics(mid)
-
-      const score = this.calculateOfferScore(
-        result.net_rental_yield,
-        result.monthly_cash_flow,
-        mid,
-        target_yield_range
-      )
-
-      if (score > best_score) {
-        best_score = score
-        best_years = mid
-        best_result = result
+      if (diff < best_diff) {
+        best_diff = diff
+        best_amortization = years
+        best_payment = monthly_payment
+        best_yield = net_rental_yield
       }
 
-      // Binary search: longer amortization = lower yield
-      if (result.net_rental_yield < min_yield) {
-        high = mid - 1 // Need shorter amortization for higher yield
-      } else if (result.net_rental_yield > max_yield) {
-        low = mid + 1 // Need longer amortization for lower yield
-      } else {
-        // Within range - check neighbors for better score
-        for (let delta = -2; delta <= 2; delta++) {
-          const check_years = mid + delta
-          if (check_years >= min_years && check_years <= max_years && check_years !== mid) {
-            const check_result = calculateMetrics(check_years)
-            const check_score = this.calculateOfferScore(
-              check_result.net_rental_yield,
-              check_result.monthly_cash_flow,
-              check_years,
-              target_yield_range
-            )
-
-            if (check_score > best_score) {
-              best_score = check_score
-              best_years = check_years
-              best_result = check_result
-            }
-          }
-        }
+      // If we're within the range and close to target, we can stop
+      if (net_rental_yield >= min_yield && net_rental_yield <= max_yield && diff < 0.5) {
         break
       }
     }
 
     return {
-      amortization_years: best_years,
-      monthly_payment: best_result.monthly_payment,
-      net_rental_yield: best_result.net_rental_yield
+      amortization_years: best_amortization,
+      monthly_payment: best_payment,
+      net_rental_yield: best_yield
     }
   }
 
   // Calculate markup percentage - always 10%
   private calculateTieredMarkup(listed_price: number): number {
     return 0.10 // Always 10% markup regardless of price
-  }
-
-  /**
-   * OPTIMIZATION #9: Find optimal entry fee percentage that maximizes overall score
-   * Tests entry fees from 10% to max in 0.5% increments
-   */
-  private findOptimalEntryFee(
-    offer_price: number,
-    property_data: PropertyData,
-    max_entry_fee_percent: number,
-    target_yield_range: [number, number]
-  ): number {
-    const min_entry_fee = 10.0 // 10% minimum
-    let best_entry_fee = max_entry_fee_percent
-    let best_score = -Infinity
-
-    // Test different entry fees in 0.5% increments
-    for (let fee = min_entry_fee; fee <= max_entry_fee_percent; fee += 0.5) {
-      const entry_fee_amount = offer_price * (fee / 100)
-      const closing_cost = offer_price * this.config.closing_cost_percent_of_offer
-      const rehab_cost = this.utils.calculateRehabCost()
-      const down_payment = entry_fee_amount - rehab_cost - closing_cost - this.config.assignment_fee
-
-      // Skip if down payment becomes negative
-      if (down_payment < 0) continue
-
-      const loan_amount = offer_price - down_payment
-
-      // Find optimal amortization for this entry fee
-      const { amortization_years, monthly_payment, net_rental_yield } = this.findOptimalAmortization(
-        loan_amount,
-        entry_fee_amount,
-        property_data,
-        target_yield_range
-      )
-
-      const non_debt_expenses = this.utils.calculateNonDebtExpenses(property_data)
-      const monthly_cash_flow = property_data.monthly_rent - non_debt_expenses - monthly_payment
-
-      // Score this configuration
-      const score = this.calculateOfferScore(
-        net_rental_yield,
-        monthly_cash_flow,
-        amortization_years,
-        target_yield_range
-      )
-
-      if (score > best_score) {
-        best_score = score
-        best_entry_fee = fee
-      }
-    }
-
-    return best_entry_fee
   }
 
   calculateMaxOwnerFavoredOffer(property_data: PropertyData): OfferResult {
@@ -265,13 +78,8 @@ export class SellerFinanceCalculator {
     const future_value = this.utils.calculateAppreciatedValue(property_data.listed_price, balloon_period)
     const appreciation_profit = future_value - offer_price
 
-    // OPTIMIZATION #9: Find optimal entry fee
-    const entry_fee_percent = this.findOptimalEntryFee(
-      offer_price,
-      property_data,
-      offer_cfg.entry_fee_max_percent,
-      offer_cfg.net_rental_yield_range
-    )
+    // Start with max entry fee
+    let entry_fee_percent = offer_cfg.entry_fee_max_percent
     const entry_fee_amount = offer_price * (entry_fee_percent / 100)
 
     // Calculate costs and loan
@@ -318,13 +126,8 @@ export class SellerFinanceCalculator {
     const future_value = this.utils.calculateAppreciatedValue(offer_price, balloon_period)
     const appreciation_profit = future_value - offer_price
 
-    // OPTIMIZATION #9: Find optimal entry fee
-    const entry_fee_percent = this.findOptimalEntryFee(
-      offer_price,
-      property_data,
-      offer_cfg.entry_fee_max_percent,
-      offer_cfg.net_rental_yield_range
-    )
+    // Start with max entry fee
+    let entry_fee_percent = offer_cfg.entry_fee_max_percent
     const entry_fee_amount = offer_price * (entry_fee_percent / 100)
 
     // Calculate costs and loan
@@ -372,13 +175,8 @@ export class SellerFinanceCalculator {
     const future_value = this.utils.calculateAppreciatedValue(property_data.listed_price, balloon_period)
     const appreciation_profit = future_value - offer_price
 
-    // OPTIMIZATION #9: Find optimal entry fee
-    const entry_fee_percent = this.findOptimalEntryFee(
-      offer_price,
-      property_data,
-      offer_cfg.entry_fee_max_percent,
-      offer_cfg.net_rental_yield_range
-    )
+    // Entry fee max 20%
+    let entry_fee_percent = offer_cfg.entry_fee_max_percent
     const entry_fee_amount = offer_price * (entry_fee_percent / 100)
 
     // Calculate costs and loan
