@@ -201,6 +201,7 @@ export class SellerFinanceCalculator {
   /**
    * OPTIMIZATION #9: Find optimal down payment percentage (5-10% of offer price)
    * Entry fee is calculated as: Down Payment + Rehab + Closing + Assignment
+   * CONSTRAINT: Entry fee must not exceed 20% of offer price
    */
   private findOptimalDownPayment(
     offer_price: number,
@@ -209,6 +210,7 @@ export class SellerFinanceCalculator {
   ): { down_payment_percent: number; entry_fee_amount: number } {
     const min_down_payment_percent = 5.0  // 5% minimum
     const max_down_payment_percent = 10.0 // 10% maximum
+    const max_entry_fee_percent = 20.0    // 20% maximum entry fee
     let best_down_payment_percent = min_down_payment_percent
     let best_entry_fee_amount = 0
     let best_score = -Infinity
@@ -221,6 +223,13 @@ export class SellerFinanceCalculator {
 
       // Calculate entry fee from components
       const entry_fee_amount = down_payment + rehab_cost + closing_cost + this.config.assignment_fee
+      const entry_fee_percent = (entry_fee_amount / offer_price) * 100
+
+      // CONSTRAINT: Skip if entry fee exceeds 20% of offer price
+      if (entry_fee_percent > max_entry_fee_percent) {
+        continue
+      }
+
       const loan_amount = offer_price - down_payment
 
       // Find optimal amortization for this down payment
