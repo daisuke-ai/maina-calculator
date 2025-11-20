@@ -6,6 +6,7 @@ import { formatCurrency, formatPercentage } from '@/lib/utils'
 import { exportToPDF } from '@/lib/pdf-export'
 import { exportToExcel } from '@/lib/excel-export'
 import { SendLOIModal } from './SendLOIModal'
+import { DynamicRecalculator } from '@/lib/calculator/dynamic-recalculator'
 import {
   Download,
   FileSpreadsheet,
@@ -59,6 +60,9 @@ export function ResultsTable({
 
   // Temporary edit value
   const [editValue, setEditValue] = useState<string>('')
+
+  // Initialize dynamic recalculator
+  const dynamicRecalculator = new DynamicRecalculator()
 
   // Reset editable offers when new offers prop comes in
   useEffect(() => {
@@ -161,196 +165,6 @@ export function ResultsTable({
     return { viability: 'good', reasons }
   }
 
-  // Comprehensive recalculation function
-  const recalculateOffer = (offer: OfferResult, editedField: string, newValue: number): OfferResult => {
-    const updated = { ...offer }
-
-    // Get non-debt expenses (constant for all calculations)
-    const nonDebtExpenses = calculateNonDebtExpenses()
-
-    switch (editedField) {
-      case 'offer_price': {
-        // User changed offer price
-        const offerPrice = newValue
-        updated.final_offer_price = offerPrice
-
-        // Recalculate closing cost (2% of offer price)
-        const closingCost = offerPrice * CONFIG.closing_cost_percent
-
-        // Recalculate entry fee amount (keeping the same percentage)
-        // Entry Fee = Down Payment + Rehab + Closing + Assignment
-        // So: Down Payment = Entry Fee - Rehab - Closing - Assignment
-        const entryFeeAmount = offerPrice * (updated.final_entry_fee_percent / 100)
-        updated.final_entry_fee_amount = entryFeeAmount
-
-        // Recalculate down payment
-        const downPayment = entryFeeAmount - updated.rehab_cost - closingCost - CONFIG.assignment_fee
-        updated.down_payment = downPayment
-        updated.down_payment_percent = (downPayment / offerPrice) * 100
-
-        // Recalculate loan amount
-        updated.loan_amount = offerPrice - downPayment
-
-        // Keep the same monthly payment (user didn't change it)
-        // But recalculate amortization period
-        if (updated.monthly_payment > 0) {
-          updated.amortization_years = updated.loan_amount / (updated.monthly_payment * 12)
-        }
-
-        // Recalculate cash flow (monthly payment unchanged)
-        updated.final_monthly_cash_flow = monthlyRent - nonDebtExpenses - updated.monthly_payment
-
-        // Recalculate net rental yield
-        const annualNetIncome = updated.final_monthly_cash_flow * 12
-        updated.net_rental_yield = (annualNetIncome / entryFeeAmount) * 100
-        updated.final_coc_percent = updated.net_rental_yield // COC same as yield
-
-        // Recalculate balloon payment
-        const principalPaid = Math.min(updated.monthly_payment * updated.balloon_period * 12, updated.loan_amount)
-        updated.principal_paid = principalPaid
-        updated.balloon_payment = Math.max(0, updated.loan_amount - principalPaid)
-
-        // Recalculate appreciation profit
-        const futureValue = propertyData.listed_price * Math.pow(1 + CONFIG.appreciation_rate, updated.balloon_period)
-        updated.appreciation_profit = futureValue - offerPrice
-        break
-      }
-
-      case 'down_payment': {
-        // User changed down payment directly
-        const downPayment = newValue
-        updated.down_payment = downPayment
-        updated.down_payment_percent = (downPayment / updated.final_offer_price) * 100
-
-        // Recalculate loan amount
-        updated.loan_amount = updated.final_offer_price - downPayment
-
-        // Recalculate entry fee (Down Payment + Rehab + Closing + Assignment)
-        const closingCost = updated.final_offer_price * CONFIG.closing_cost_percent
-        const entryFeeAmount = downPayment + updated.rehab_cost + closingCost + CONFIG.assignment_fee
-        updated.final_entry_fee_amount = entryFeeAmount
-        updated.final_entry_fee_percent = (entryFeeAmount / updated.final_offer_price) * 100
-
-        // Keep the same monthly payment, but recalculate amortization
-        if (updated.monthly_payment > 0) {
-          updated.amortization_years = updated.loan_amount / (updated.monthly_payment * 12)
-        }
-
-        // Cash flow unchanged (monthly payment unchanged)
-        updated.final_monthly_cash_flow = monthlyRent - nonDebtExpenses - updated.monthly_payment
-
-        // Recalculate net rental yield with new entry fee
-        const annualNetIncome = updated.final_monthly_cash_flow * 12
-        updated.net_rental_yield = (annualNetIncome / entryFeeAmount) * 100
-        updated.final_coc_percent = updated.net_rental_yield
-
-        // Recalculate balloon payment with new loan amount
-        const principalPaid = Math.min(updated.monthly_payment * updated.balloon_period * 12, updated.loan_amount)
-        updated.principal_paid = principalPaid
-        updated.balloon_payment = Math.max(0, updated.loan_amount - principalPaid)
-        break
-      }
-
-      case 'monthly_payment': {
-        // User changed monthly payment
-        const monthlyPayment = newValue
-        updated.monthly_payment = monthlyPayment
-
-        // Recalculate monthly cash flow
-        updated.final_monthly_cash_flow = monthlyRent - nonDebtExpenses - monthlyPayment
-
-        // Recalculate net rental yield
-        const annualNetIncome = updated.final_monthly_cash_flow * 12
-        updated.net_rental_yield = (annualNetIncome / updated.final_entry_fee_amount) * 100
-        updated.final_coc_percent = updated.net_rental_yield
-
-        // Recalculate amortization period
-        if (monthlyPayment > 0) {
-          updated.amortization_years = updated.loan_amount / (monthlyPayment * 12)
-        } else {
-          updated.amortization_years = Infinity
-        }
-
-        // Recalculate principal paid and balloon payment
-        const principalPaid = Math.min(monthlyPayment * updated.balloon_period * 12, updated.loan_amount)
-        updated.principal_paid = principalPaid
-        updated.balloon_payment = Math.max(0, updated.loan_amount - principalPaid)
-        break
-      }
-
-      case 'balloon_year': {
-        // User changed balloon period
-        const balloonYears = Math.round(newValue)
-        updated.balloon_period = balloonYears
-
-        // Recalculate principal paid during balloon period
-        const principalPaid = Math.min(updated.monthly_payment * balloonYears * 12, updated.loan_amount)
-        updated.principal_paid = principalPaid
-
-        // Recalculate balloon payment
-        updated.balloon_payment = Math.max(0, updated.loan_amount - principalPaid)
-
-        // Recalculate appreciation profit with new balloon period
-        const futureValue = propertyData.listed_price * Math.pow(1 + CONFIG.appreciation_rate, balloonYears)
-        updated.appreciation_profit = futureValue - updated.final_offer_price
-        break
-      }
-
-      case 'rehab_cost': {
-        // User changed rehab cost
-        const rehabCost = Math.max(CONFIG.min_rehab_cost, newValue)
-        updated.rehab_cost = rehabCost
-
-        // Entry fee stays FIXED at the original percentage
-        // Down payment ADJUSTS to maintain fixed entry fee
-        const closingCost = updated.final_offer_price * CONFIG.closing_cost_percent
-        const entryFeeAmount = updated.final_entry_fee_amount // Keep entry fee fixed
-
-        // Recalculate down payment
-        const downPayment = entryFeeAmount - rehabCost - closingCost - CONFIG.assignment_fee
-        updated.down_payment = downPayment
-        updated.down_payment_percent = (downPayment / updated.final_offer_price) * 100
-
-        // Recalculate loan amount (offer - down payment)
-        const loanAmount = updated.final_offer_price - downPayment
-        updated.loan_amount = loanAmount
-
-        // Recalculate monthly payment (loan / months)
-        const monthlyPayment = loanAmount / (updated.amortization_years * 12)
-        updated.monthly_payment = monthlyPayment
-
-        // Recalculate cash flow (rent - expenses - payment)
-        const nonDebtExpenses = calculateNonDebtExpenses()
-        updated.final_monthly_cash_flow = propertyData.monthly_rent - nonDebtExpenses - monthlyPayment
-
-        // Recalculate net rental yield
-        const annualNetIncome = updated.final_monthly_cash_flow * 12
-        updated.net_rental_yield = (annualNetIncome / entryFeeAmount) * 100
-        updated.final_coc_percent = updated.net_rental_yield
-
-        // Recalculate balloon payment
-        const principalPaid = monthlyPayment * 12 * updated.balloon_period
-        updated.principal_paid = principalPaid
-        updated.balloon_payment = Math.max(0, loanAmount - principalPaid)
-        break
-      }
-    }
-
-    // Recalculate deal viability with new values
-    const { viability, reasons } = evaluateDealViability(
-      updated.offer_type,
-      updated.down_payment,
-      updated.down_payment_percent,
-      updated.final_monthly_cash_flow,
-      updated.net_rental_yield,
-      updated.amortization_years
-    )
-
-    updated.deal_viability = viability
-    updated.viability_reasons = reasons
-
-    return updated
-  }
 
   const handleEditSave = () => {
     if (editingRow === null || editingColumn === null) return
@@ -363,8 +177,21 @@ export function ResultsTable({
     }
 
     const newOffers = [...editableOffers]
-    // Recalculate the entire offer with dependent values
-    newOffers[editingColumn] = recalculateOffer(editableOffers[editingColumn], editingRow, numValue)
+
+    // Use DynamicRecalculator based on which field is being edited
+    if (editingRow === 'offer_price') {
+      newOffers[editingColumn] = dynamicRecalculator.recalculateFromOfferPrice(
+        editableOffers[editingColumn],
+        numValue,
+        propertyData
+      )
+    } else if (editingRow === 'down_payment') {
+      newOffers[editingColumn] = dynamicRecalculator.recalculateFromDownPayment(
+        editableOffers[editingColumn],
+        numValue,
+        propertyData
+      )
+    }
 
     setEditableOffers(newOffers)
     setEditingRow(null)
