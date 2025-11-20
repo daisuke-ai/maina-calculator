@@ -199,32 +199,31 @@ export class SellerFinanceCalculator {
   }
 
   /**
-   * OPTIMIZATION #9: Find optimal entry fee percentage that maximizes overall score
-   * Tests entry fees from 10% to max in 0.5% increments
+   * OPTIMIZATION #9: Find optimal down payment percentage (5-10% of offer price)
+   * Entry fee is calculated as: Down Payment + Rehab + Closing + Assignment
    */
-  private findOptimalEntryFee(
+  private findOptimalDownPayment(
     offer_price: number,
     property_data: PropertyData,
-    max_entry_fee_percent: number,
     target_yield_range: [number, number]
-  ): number {
-    const min_entry_fee = 10.0 // 10% minimum
-    let best_entry_fee = max_entry_fee_percent
+  ): { down_payment_percent: number; entry_fee_amount: number } {
+    const min_down_payment_percent = 5.0  // 5% minimum
+    const max_down_payment_percent = 10.0 // 10% maximum
+    let best_down_payment_percent = min_down_payment_percent
+    let best_entry_fee_amount = 0
     let best_score = -Infinity
 
-    // Test different entry fees in 0.5% increments
-    for (let fee = min_entry_fee; fee <= max_entry_fee_percent; fee += 0.5) {
-      const entry_fee_amount = offer_price * (fee / 100)
+    // Test different down payment percentages in 0.5% increments
+    for (let dp_percent = min_down_payment_percent; dp_percent <= max_down_payment_percent; dp_percent += 0.5) {
+      const down_payment = offer_price * (dp_percent / 100)
       const closing_cost = offer_price * this.config.closing_cost_percent_of_offer
       const rehab_cost = this.utils.calculateRehabCost()
-      const down_payment = entry_fee_amount - rehab_cost - closing_cost - this.config.assignment_fee
 
-      // Skip if down payment becomes negative
-      if (down_payment < 0) continue
-
+      // Calculate entry fee from components
+      const entry_fee_amount = down_payment + rehab_cost + closing_cost + this.config.assignment_fee
       const loan_amount = offer_price - down_payment
 
-      // Find optimal amortization for this entry fee
+      // Find optimal amortization for this down payment
       const { amortization_years, monthly_payment, net_rental_yield } = this.findOptimalAmortization(
         loan_amount,
         entry_fee_amount,
@@ -245,11 +244,15 @@ export class SellerFinanceCalculator {
 
       if (score > best_score) {
         best_score = score
-        best_entry_fee = fee
+        best_down_payment_percent = dp_percent
+        best_entry_fee_amount = entry_fee_amount
       }
     }
 
-    return best_entry_fee
+    return {
+      down_payment_percent: best_down_payment_percent,
+      entry_fee_amount: best_entry_fee_amount
+    }
   }
 
   calculateMaxOwnerFavoredOffer(property_data: PropertyData): OfferResult {
@@ -265,19 +268,18 @@ export class SellerFinanceCalculator {
     const future_value = this.utils.calculateAppreciatedValue(property_data.listed_price, balloon_period)
     const appreciation_profit = future_value - offer_price
 
-    // OPTIMIZATION #9: Find optimal entry fee
-    const entry_fee_percent = this.findOptimalEntryFee(
+    // OPTIMIZATION #9: Find optimal down payment (5-10%)
+    const { down_payment_percent, entry_fee_amount } = this.findOptimalDownPayment(
       offer_price,
       property_data,
-      offer_cfg.entry_fee_max_percent,
       offer_cfg.net_rental_yield_range
     )
-    const entry_fee_amount = offer_price * (entry_fee_percent / 100)
 
-    // Calculate costs and loan
+    // Calculate down payment and loan from optimized percentage
     const closing_cost = offer_price * this.config.closing_cost_percent_of_offer
-    const down_payment = entry_fee_amount - rehab_cost - closing_cost - this.config.assignment_fee
+    const down_payment = offer_price * (down_payment_percent / 100)
     const loan_amount = offer_price - down_payment
+    const entry_fee_percent = (entry_fee_amount / offer_price) * 100
 
     // Find optimal amortization to target net rental yield range
     const { amortization_years, monthly_payment, net_rental_yield } = this.findOptimalAmortization(
@@ -318,19 +320,18 @@ export class SellerFinanceCalculator {
     const future_value = this.utils.calculateAppreciatedValue(offer_price, balloon_period)
     const appreciation_profit = future_value - offer_price
 
-    // OPTIMIZATION #9: Find optimal entry fee
-    const entry_fee_percent = this.findOptimalEntryFee(
+    // OPTIMIZATION #9: Find optimal down payment (5-10%)
+    const { down_payment_percent, entry_fee_amount } = this.findOptimalDownPayment(
       offer_price,
       property_data,
-      offer_cfg.entry_fee_max_percent,
       offer_cfg.net_rental_yield_range
     )
-    const entry_fee_amount = offer_price * (entry_fee_percent / 100)
 
-    // Calculate costs and loan
+    // Calculate down payment and loan from optimized percentage
     const closing_cost = offer_price * this.config.closing_cost_percent_of_offer
-    const down_payment = entry_fee_amount - rehab_cost - closing_cost - this.config.assignment_fee
+    const down_payment = offer_price * (down_payment_percent / 100)
     const loan_amount = offer_price - down_payment
+    const entry_fee_percent = (entry_fee_amount / offer_price) * 100
 
     // Find optimal amortization to target net rental yield range
     const { amortization_years, monthly_payment, net_rental_yield } = this.findOptimalAmortization(
@@ -372,19 +373,18 @@ export class SellerFinanceCalculator {
     const future_value = this.utils.calculateAppreciatedValue(property_data.listed_price, balloon_period)
     const appreciation_profit = future_value - offer_price
 
-    // OPTIMIZATION #9: Find optimal entry fee
-    const entry_fee_percent = this.findOptimalEntryFee(
+    // OPTIMIZATION #9: Find optimal down payment (5-10%)
+    const { down_payment_percent, entry_fee_amount } = this.findOptimalDownPayment(
       offer_price,
       property_data,
-      offer_cfg.entry_fee_max_percent,
       offer_cfg.net_rental_yield_range
     )
-    const entry_fee_amount = offer_price * (entry_fee_percent / 100)
 
-    // Calculate costs and loan
+    // Calculate down payment and loan from optimized percentage
     const closing_cost = offer_price * this.config.closing_cost_percent_of_offer
-    const down_payment = entry_fee_amount - rehab_cost - closing_cost - this.config.assignment_fee
+    const down_payment = offer_price * (down_payment_percent / 100)
     const loan_amount = offer_price - down_payment
+    const entry_fee_percent = (entry_fee_amount / offer_price) * 100
 
     // Find optimal amortization to target net rental yield range
     const { amortization_years, monthly_payment, net_rental_yield } = this.findOptimalAmortization(
