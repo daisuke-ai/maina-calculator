@@ -138,7 +138,7 @@ export function FinancialDetailsForm({
     monthly_property_tax: propertyAPIData.ANNUAL_TAX_FINAL_MONTHLY || 0,
     monthly_insurance: propertyAPIData.ANNUAL_INSURANCE_FINAL_MONTHLY || 0,
     monthly_hoa_fee: propertyAPIData.MONTHLY_HOA_FEE_FINAL || 0,
-    monthly_other_fees: 150,
+    monthly_other_fees: 0,
   })
 
   const [showTooltip, setShowTooltip] = React.useState<string | null>(null)
@@ -151,7 +151,7 @@ export function FinancialDetailsForm({
       monthly_property_tax: propertyAPIData.ANNUAL_TAX_FINAL_MONTHLY || 0,
       monthly_insurance: propertyAPIData.ANNUAL_INSURANCE_FINAL_MONTHLY || 0,
       monthly_hoa_fee: propertyAPIData.MONTHLY_HOA_FEE_FINAL || 0,
-      monthly_other_fees: 150,
+      monthly_other_fees: 0,
     })
   }, [propertyAPIData.ADDRESS]) // Reset when address changes
 

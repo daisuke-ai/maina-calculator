@@ -31,7 +31,7 @@ export default function Home() {
       monthly_property_tax: data.ANNUAL_TAX_FINAL_MONTHLY || 0,
       monthly_insurance: data.ANNUAL_INSURANCE_FINAL_MONTHLY || 0,
       monthly_hoa_fee: data.MONTHLY_HOA_FEE_FINAL || 0,
-      monthly_other_fees: 150,
+      monthly_other_fees: 0,
     })
   }, [])
 
