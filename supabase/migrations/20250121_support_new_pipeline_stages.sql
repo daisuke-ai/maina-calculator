@@ -178,6 +178,96 @@ CREATE INDEX IF NOT EXISTS idx_pipeline_deals_pipeline_type
 ON pipeline_deals(pipeline_type);
 
 -- =====================================================
+-- 4. UPDATE create_pipeline_deal FUNCTION
+-- =====================================================
+
+-- Drop and recreate create_pipeline_deal to support pipeline_type
+CREATE OR REPLACE FUNCTION create_pipeline_deal(
+  p_property_address TEXT,
+  p_opportunity_value NUMERIC,
+  p_agent_id INTEGER,
+  p_agent_name TEXT,
+  p_agent_email TEXT,
+  p_offer_price NUMERIC DEFAULT NULL,
+  p_down_payment NUMERIC DEFAULT NULL,
+  p_monthly_payment NUMERIC DEFAULT NULL,
+  p_loi_tracking_id TEXT DEFAULT NULL,
+  p_expected_closing_date DATE DEFAULT NULL,
+  p_created_by TEXT DEFAULT NULL,
+  p_pipeline_type TEXT DEFAULT 'acquisition'
+)
+RETURNS UUID AS $$
+DECLARE
+  v_deal_id UUID;
+  v_initial_stage TEXT;
+  v_initial_probability INTEGER;
+BEGIN
+  -- Determine initial stage based on pipeline type
+  IF p_pipeline_type = 'escrow' THEN
+    v_initial_stage := 'offer_accepted';
+    v_initial_probability := 30;
+  ELSE
+    v_initial_stage := 'loi_accepted';
+    v_initial_probability := 25;
+  END IF;
+
+  -- Insert deal
+  INSERT INTO pipeline_deals (
+    property_address,
+    opportunity_value,
+    offer_price,
+    down_payment,
+    monthly_payment,
+    agent_id,
+    agent_name,
+    agent_email,
+    loi_tracking_id,
+    expected_closing_date,
+    pipeline_type,
+    stage,
+    status,
+    probability_to_close,
+    created_by
+  ) VALUES (
+    p_property_address,
+    p_opportunity_value,
+    p_offer_price,
+    p_down_payment,
+    p_monthly_payment,
+    p_agent_id,
+    p_agent_name,
+    p_agent_email,
+    p_loi_tracking_id,
+    p_expected_closing_date,
+    p_pipeline_type,
+    v_initial_stage,
+    'active',
+    v_initial_probability,
+    p_created_by
+  ) RETURNING id INTO v_deal_id;
+
+  -- Create initial stage history
+  INSERT INTO pipeline_stage_history (
+    deal_id,
+    from_stage,
+    to_stage,
+    changed_by,
+    notes
+  ) VALUES (
+    v_deal_id,
+    NULL,
+    v_initial_stage,
+    p_created_by,
+    'Deal created and entered ' || p_pipeline_type || ' pipeline'
+  );
+
+  RETURN v_deal_id;
+END;
+$$ LANGUAGE plpgsql;
+
+COMMENT ON FUNCTION create_pipeline_deal IS 'Create a new pipeline deal with support for Acquisition and Escrow pipelines';
+
+-- =====================================================
 -- MIGRATION COMPLETE
 -- =====================================================
 
@@ -187,6 +277,7 @@ BEGIN
   RAISE NOTICE '  - Added pipeline_type column';
   RAISE NOTICE '  - Updated stage CHECK constraint with new stages';
   RAISE NOTICE '  - Updated update_deal_stage function to support both pipelines';
+  RAISE NOTICE '  - Updated create_pipeline_deal function to support both pipelines';
   RAISE NOTICE '  - Added index on pipeline_type';
   RAISE NOTICE 'Supported stages:';
   RAISE NOTICE '  Acquisition: loi_accepted, emd, psa, inspection, title_escrow, closing';

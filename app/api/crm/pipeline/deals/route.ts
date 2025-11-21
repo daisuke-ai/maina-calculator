@@ -113,6 +113,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate pipeline_type if provided
+    const pipelineType = body.pipeline_type || 'acquisition';
+    if (!['acquisition', 'escrow'].includes(pipelineType)) {
+      return NextResponse.json(
+        { error: 'Invalid pipeline_type. Must be "acquisition" or "escrow"' },
+        { status: 400 }
+      );
+    }
+
     // Use the database function to create deal with history
     const { data, error } = await supabase.rpc('create_pipeline_deal', {
       p_property_address: body.property_address,
@@ -126,6 +135,7 @@ export async function POST(request: NextRequest) {
       p_loi_tracking_id: body.loi_tracking_id || null,
       p_expected_closing_date: body.expected_closing_date || null,
       p_created_by: body.created_by || 'api',
+      p_pipeline_type: pipelineType,
     });
 
     if (error) {
