@@ -57,7 +57,7 @@ interface AgentStats {
   emails_replied_30d: number
   reply_rate_30d: number
   last_email_sent: string | null
-  // Call data
+  // Call data (all-time)
   total_calls: number
   inbound_calls: number
   outbound_calls: number
@@ -66,8 +66,14 @@ interface AgentStats {
   total_duration: number
   avg_duration: number
   answer_rate: number
+  // Call data (time-range specific)
   calls_30d: number
+  inbound_calls_30d: number
+  outbound_calls_30d: number
   answered_calls_30d: number
+  missed_calls_30d: number
+  total_duration_30d: number
+  avg_duration_30d: number
   answer_rate_30d: number
 }
 
@@ -145,34 +151,36 @@ export default function CRMDashboard() {
       if (sortBy === 'name') {
         comparison = a.aliasName.localeCompare(b.aliasName)
       } else if (sortBy === 'sent') {
-        const aVal = timeRange === 'month' ? a.emails_sent_30d : a.total_sent
-        const bVal = timeRange === 'month' ? b.emails_sent_30d : b.total_sent
+        const aVal = timeRange === 'all' ? a.total_sent : a.emails_sent_30d
+        const bVal = timeRange === 'all' ? b.total_sent : b.emails_sent_30d
         comparison = (aVal || 0) - (bVal || 0)
       } else if (sortBy === 'reply_rate') {
-        const aVal = timeRange === 'month' ? a.reply_rate_30d : a.reply_rate
-        const bVal = timeRange === 'month' ? b.reply_rate_30d : b.reply_rate
+        const aVal = timeRange === 'all' ? a.reply_rate : a.reply_rate_30d
+        const bVal = timeRange === 'all' ? b.reply_rate : b.reply_rate_30d
         comparison = (aVal || 0) - (bVal || 0)
       } else if (sortBy === 'calls') {
-        const aVal = timeRange === 'month' ? a.calls_30d : a.total_calls
-        const bVal = timeRange === 'month' ? b.calls_30d : b.total_calls
+        const aVal = timeRange === 'all' ? a.total_calls : a.calls_30d
+        const bVal = timeRange === 'all' ? b.total_calls : b.calls_30d
         comparison = (aVal || 0) - (bVal || 0)
       } else if (sortBy === 'answer_rate') {
-        const aVal = timeRange === 'month' ? a.answer_rate_30d : a.answer_rate
-        const bVal = timeRange === 'month' ? b.answer_rate_30d : b.answer_rate
+        const aVal = timeRange === 'all' ? a.answer_rate : a.answer_rate_30d
+        const bVal = timeRange === 'all' ? b.answer_rate : b.answer_rate_30d
         comparison = (aVal || 0) - (bVal || 0)
       }
       return sortOrder === 'asc' ? comparison : -comparison
     })
 
   // Determine which fields to use based on time range
-  const getEmailSentField = () => timeRange === 'month' ? 'emails_sent_30d' : 'total_sent'
-  const getEmailRepliedField = () => timeRange === 'month' ? 'emails_replied_30d' : 'total_replied'
-  const getReplyRateField = () => timeRange === 'month' ? 'reply_rate_30d' : 'reply_rate'
+  // API returns _30d fields for ANY specific time range (week, month, quarter, year)
+  // Only use all-time fields when timeRange is 'all'
+  const getEmailSentField = () => timeRange === 'all' ? 'total_sent' : 'emails_sent_30d'
+  const getEmailRepliedField = () => timeRange === 'all' ? 'total_replied' : 'emails_replied_30d'
+  const getReplyRateField = () => timeRange === 'all' ? 'reply_rate' : 'reply_rate_30d'
 
-  const getCallsField = () => timeRange === 'month' ? 'calls_30d' : 'total_calls'
-  const getAnsweredCallsField = () => timeRange === 'month' ? 'answered_calls_30d' : 'answered_calls'
-  const getDurationField = () => timeRange === 'month' ? 'total_duration_30d' : 'total_duration'
-  const getAnswerRateField = () => timeRange === 'month' ? 'answer_rate_30d' : 'answer_rate'
+  const getCallsField = () => timeRange === 'all' ? 'total_calls' : 'calls_30d'
+  const getAnsweredCallsField = () => timeRange === 'all' ? 'answered_calls' : 'answered_calls_30d'
+  const getDurationField = () => timeRange === 'all' ? 'total_duration' : 'total_duration_30d'
+  const getAnswerRateField = () => timeRange === 'all' ? 'answer_rate' : 'answer_rate_30d'
 
   // Get field names based on current time range
   const emailSentField = getEmailSentField() as keyof AgentStats
@@ -415,7 +423,7 @@ export default function CRMDashboard() {
                 <p className="text-sm text-muted-foreground">Active Agents</p>
                 <p className="text-2xl font-bold text-foreground mt-1">{agents.length}</p>
                 <p className="text-xs text-muted-foreground mt-2">
-                  {timeRange === 'month' ? 'Last 30 days' : timeRangeOptions.find(o => o.value === timeRange)?.label}
+                  {timeRangeOptions.find(o => o.value === timeRange)?.label}
                 </p>
               </div>
               <Users className="w-5 h-5 text-muted-foreground" />
