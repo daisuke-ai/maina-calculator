@@ -270,6 +270,7 @@ async function forwardToCommsSpecialist(inboundEmail: any, loi: any | null) {
             .info-table td:first-child { font-weight: bold; width: 150px; }
             .warning { background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 5px; margin: 20px 0; }
             .reply-content { background: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0; }
+            .original-loi { background: #e7f3ff; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #007bff; }
             .actions { margin: 20px 0; }
             .btn { display: inline-block; padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 5px; margin-right: 10px; }
           </style>
@@ -314,9 +315,18 @@ async function forwardToCommsSpecialist(inboundEmail: any, loi: any | null) {
           `}
 
           <div class="reply-content">
-            <h3>Reply Message:</h3>
+            <h3>📥 Reply Message:</h3>
             ${inboundEmail.html || `<pre>${inboundEmail.text}</pre>`}
           </div>
+
+          ${loi && loi.html_content ? `
+            <div class="original-loi">
+              <h3>📄 Original LOI Sent:</h3>
+              <div style="background: white; padding: 15px; border-radius: 5px; max-height: 400px; overflow-y: auto;">
+                ${loi.html_content}
+              </div>
+            </div>
+          ` : ''}
 
           <div class="actions">
             <a href="mailto:${inboundEmail.from}" class="btn">📧 Reply to Realtor</a>

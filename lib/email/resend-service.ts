@@ -37,7 +37,7 @@ const COMPANY_CONFIG = {
 export async function sendLOIEmail(
   request: LOIEmailRequest,
   trackingId: string
-): Promise<{ success: boolean; emailId?: string; error?: string }> {
+): Promise<{ success: boolean; emailId?: string; error?: string; htmlContent?: string }> {
   try {
     // Prepare email template data
     const templateData = {
@@ -102,6 +102,7 @@ export async function sendLOIEmail(
     return {
       success: true,
       emailId: data?.id,
+      htmlContent: htmlContent,
       // Note: Message-ID is not immediately available in Resend send response
       // It will be captured via webhook when email.sent event fires
     };

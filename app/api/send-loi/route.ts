@@ -57,7 +57,8 @@ export async function POST(request: NextRequest) {
     const dbResult = await createLOIEmailRecord(
       requestData,
       trackingId,
-      emailResult.emailId
+      emailResult.emailId,
+      emailResult.htmlContent
     );
 
     if (!dbResult.success) {

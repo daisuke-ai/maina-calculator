@@ -27,7 +27,8 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 export async function createLOIEmailRecord(
   request: LOIEmailRequest,
   trackingId: string,
-  resendEmailId?: string
+  resendEmailId?: string,
+  htmlContent?: string
 ): Promise<{ success: boolean; emailId?: string; error?: string }> {
   try {
     const { data, error } = await supabase
@@ -50,6 +51,7 @@ export async function createLOIEmailRecord(
         closing_days: request.closingDays,
         status: 'sent',
         resend_email_id: resendEmailId,
+        html_content: htmlContent,
       })
       .select('id')
       .single();
@@ -234,9 +236,10 @@ export async function getAgentEmails(agentId: number): Promise<LOIEmailRecord[]>
 export async function findLOIByPropertyAddress(propertyAddress: string): Promise<any | null> {
   try {
     // First, try exact match (case-insensitive)
+    // Select all fields including html_content for showing in forwarded email
     let { data, error } = await supabase
       .from('loi_emails')
-      .select('*')
+      .select('*, html_content')
       .ilike('property_address', propertyAddress)
       .eq('replied', false)
       .order('sent_at', { ascending: false })
@@ -255,7 +258,7 @@ export async function findLOIByPropertyAddress(propertyAddress: string): Promise
     // Fallback: Try partial match if exact match fails
     const { data: partialData } = await supabase
       .from('loi_emails')
-      .select('*')
+      .select('*, html_content')
       .ilike('property_address', `%${propertyAddress}%`)
       .eq('replied', false)
       .order('sent_at', { ascending: false })
