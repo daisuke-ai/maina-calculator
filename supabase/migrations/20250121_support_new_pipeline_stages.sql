@@ -181,7 +181,22 @@ ON pipeline_deals(pipeline_type);
 -- 4. UPDATE create_pipeline_deal FUNCTION
 -- =====================================================
 
--- Drop and recreate create_pipeline_deal to support pipeline_type
+-- Drop the old function signature first
+DROP FUNCTION IF EXISTS create_pipeline_deal(
+  TEXT,
+  NUMERIC,
+  INTEGER,
+  TEXT,
+  TEXT,
+  NUMERIC,
+  NUMERIC,
+  NUMERIC,
+  TEXT,
+  DATE,
+  TEXT
+);
+
+-- Create new function with pipeline_type parameter
 CREATE OR REPLACE FUNCTION create_pipeline_deal(
   p_property_address TEXT,
   p_opportunity_value NUMERIC,
