@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getValidTransitions } from '@/lib/pipeline/constants';
 
 // Initialize Supabase client with service role key
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -7,15 +8,27 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Valid stage transitions
-const VALID_TRANSITIONS: { [key: string]: string[] } = {
-  'loi_accepted': ['due_diligence', 'lost'],
-  'due_diligence': ['contract', 'lost'],
-  'contract': ['closing', 'lost'],
-  'closing': ['won', 'lost'],
-  'won': [],
-  'lost': [],
-};
+// All valid stages from both pipelines
+const ALL_VALID_STAGES = [
+  // Acquisition Pipeline
+  'loi_accepted',
+  'emd',
+  'psa',
+  'inspection',
+  'title_escrow',
+  'closing',
+  // Escrow Pipeline
+  'offer_accepted',
+  'open_escrow',
+  'due_diligence',
+  'clearing_contingencies',
+  'final_walkthrough',
+  // Common end states
+  'won',
+  'lost',
+  // Legacy stages (for backward compatibility)
+  'contract',
+];
 
 // =====================================================
 // POST /api/crm/pipeline/deals/[id]/move
@@ -43,10 +56,9 @@ export async function POST(
     const notes = body.notes || null;
 
     // Validate new_stage is a valid stage
-    const validStages = ['loi_accepted', 'due_diligence', 'contract', 'closing', 'won', 'lost'];
-    if (!validStages.includes(newStage)) {
+    if (!ALL_VALID_STAGES.includes(newStage)) {
       return NextResponse.json(
-        { error: 'Invalid stage', validStages },
+        { error: 'Invalid stage', validStages: ALL_VALID_STAGES },
         { status: 400 }
       );
     }
@@ -77,24 +89,12 @@ export async function POST(
       });
     }
 
-    // Allow backward and forward transitions for active deals
     // Only restrict transitions from won/lost states
+    // Allow all other transitions for flexibility
     if (currentStage === 'won' || currentStage === 'lost') {
       return NextResponse.json(
         {
           error: 'Cannot move deals that are already won or lost',
-          currentStage,
-          newStage,
-        },
-        { status: 400 }
-      );
-    }
-
-    // Don't allow moving to won/lost unless from closing stage (for won) or from active stages (for lost)
-    if (newStage === 'won' && currentStage !== 'closing') {
-      return NextResponse.json(
-        {
-          error: 'Can only mark as won from closing stage',
           currentStage,
           newStage,
         },
