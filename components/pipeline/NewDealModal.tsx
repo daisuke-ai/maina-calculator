@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Plus } from 'lucide-react';
 import { AGENTS } from '@/config/agents';
 
 interface NewDealModalProps {
@@ -102,52 +102,52 @@ export default function NewDealModal({ onClose, onSuccess }: NewDealModalProps) 
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-black rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden shadow-2xl border border-white/10">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-background rounded-lg w-full max-w-3xl max-h-[90vh] overflow-hidden shadow-lg border">
         {/* Header */}
-        <div className="sticky top-0 bg-black/95 backdrop-blur-xl border-b border-white/10 p-6 flex justify-between items-center">
+        <div className="sticky top-0 bg-background border-b p-4 flex justify-between items-center">
           <div>
-            <h2 className="text-3xl font-bold text-white tracking-tight">New Pipeline Deal</h2>
-            <p className="text-sm text-gray-400 mt-1">Create a new deal in the pipeline</p>
+            <h2 className="text-xl font-bold text-foreground">New Deal</h2>
+            <p className="text-sm text-muted-foreground">Create a new pipeline deal</p>
           </div>
           <button
             onClick={onClose}
-            className="p-2.5 text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-lg transition-all"
+            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+        <form onSubmit={handleSubmit} className="p-4 space-y-4 overflow-y-auto max-h-[calc(90vh-120px)]">
           {error && (
-            <div className="p-4 bg-black/40 border border-red-500/50 rounded-xl text-white">
-              <p className="font-medium">{error}</p>
+            <div className="p-3 bg-destructive/10 border border-destructive rounded-lg">
+              <p className="text-sm text-destructive">{error}</p>
             </div>
           )}
 
           {/* Property Information */}
-          <div className="bg-black/40 border border-white/10 rounded-xl p-5 shadow-lg">
-            <h3 className="text-lg font-bold text-white mb-4">Property Information</h3>
+          <div className="border rounded-lg p-4 space-y-3">
+            <h3 className="font-semibold text-foreground">Property Information</h3>
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div>
-                <label className="block text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
-                  Property Address <span className="text-red-400">*</span>
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
+                  Property Address <span className="text-destructive">*</span>
                 </label>
                 <input
                   type="text"
                   required
                   value={formData.property_address}
                   onChange={(e) => setFormData({ ...formData, property_address: e.target.value })}
-                  className="w-full px-4 py-3 bg-black/60 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all outline-none"
+                  className="w-full px-3 py-2 bg-background border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                   placeholder="123 Main St, City, State ZIP"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
-                  Opportunity Value <span className="text-red-400">*</span>
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
+                  Opportunity Value <span className="text-destructive">*</span>
                 </label>
                 <input
                   type="number"
@@ -156,28 +156,28 @@ export default function NewDealModal({ onClose, onSuccess }: NewDealModalProps) 
                   step="1000"
                   value={formData.opportunity_value}
                   onChange={(e) => setFormData({ ...formData, opportunity_value: e.target.value })}
-                  className="w-full px-4 py-3 bg-black/60 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all outline-none"
+                  className="w-full px-3 py-2 bg-background border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                   placeholder="250000"
                 />
-                <p className="text-xs text-gray-500 mt-2">Main tracking value for forecasting</p>
+                <p className="text-xs text-muted-foreground mt-1">Main tracking value for forecasting</p>
               </div>
             </div>
           </div>
 
           {/* Agent & Priority */}
-          <div className="bg-black/40 border border-white/10 rounded-xl p-5 shadow-lg">
-            <h3 className="text-lg font-bold text-white mb-4">Agent & Priority</h3>
+          <div className="border rounded-lg p-4 space-y-3">
+            <h3 className="font-semibold text-foreground">Agent & Priority</h3>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
-                  Agent <span className="text-red-400">*</span>
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
+                  Agent <span className="text-destructive">*</span>
                 </label>
                 <select
                   required
                   value={formData.agent_id}
                   onChange={(e) => setFormData({ ...formData, agent_id: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-900/80 border border-gray-600/50 rounded-lg text-white focus:border-green-500/50 focus:ring-2 focus:ring-green-500/20 transition-all"
+                  className="w-full px-3 py-2 bg-background border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                 >
                   <option value="">Select Agent</option>
                   {AGENTS.map(agent => (
@@ -189,13 +189,13 @@ export default function NewDealModal({ onClose, onSuccess }: NewDealModalProps) 
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
                   Priority
                 </label>
                 <select
                   value={formData.priority}
                   onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-900/80 border border-gray-600/50 rounded-lg text-white focus:border-green-500/50 focus:ring-2 focus:ring-green-500/20 transition-all"
+                  className="w-full px-3 py-2 bg-background border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                 >
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
@@ -207,12 +207,14 @@ export default function NewDealModal({ onClose, onSuccess }: NewDealModalProps) 
           </div>
 
           {/* Financial Details (Optional) */}
-          <div className="bg-black/40 border border-white/10 rounded-xl p-5 shadow-lg">
-            <h3 className="text-lg font-bold text-white mb-4">Financial Details <span className="text-xs text-gray-500 font-normal">(Optional)</span></h3>
+          <div className="border rounded-lg p-4 space-y-3">
+            <h3 className="font-semibold text-foreground">
+              Financial Details <span className="text-xs text-muted-foreground font-normal">(Optional)</span>
+            </h3>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
                   Offer Price
                 </label>
                 <input
@@ -221,13 +223,13 @@ export default function NewDealModal({ onClose, onSuccess }: NewDealModalProps) 
                   step="1000"
                   value={formData.offer_price}
                   onChange={(e) => setFormData({ ...formData, offer_price: e.target.value })}
-                  className="w-full px-4 py-3 bg-black/60 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all outline-none"
+                  className="w-full px-3 py-2 bg-background border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                   placeholder="240000"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
                   Down Payment
                 </label>
                 <input
@@ -236,13 +238,13 @@ export default function NewDealModal({ onClose, onSuccess }: NewDealModalProps) 
                   step="1000"
                   value={formData.down_payment}
                   onChange={(e) => setFormData({ ...formData, down_payment: e.target.value })}
-                  className="w-full px-4 py-3 bg-black/60 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all outline-none"
+                  className="w-full px-3 py-2 bg-background border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                   placeholder="0"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
                   Monthly Payment
                 </label>
                 <input
@@ -251,13 +253,13 @@ export default function NewDealModal({ onClose, onSuccess }: NewDealModalProps) 
                   step="100"
                   value={formData.monthly_payment}
                   onChange={(e) => setFormData({ ...formData, monthly_payment: e.target.value })}
-                  className="w-full px-4 py-3 bg-black/60 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all outline-none"
+                  className="w-full px-3 py-2 bg-background border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                   placeholder="1500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
                   Balloon Period (years)
                 </label>
                 <input
@@ -266,13 +268,13 @@ export default function NewDealModal({ onClose, onSuccess }: NewDealModalProps) 
                   max="30"
                   value={formData.balloon_period}
                   onChange={(e) => setFormData({ ...formData, balloon_period: e.target.value })}
-                  className="w-full px-4 py-3 bg-black/60 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all outline-none"
+                  className="w-full px-3 py-2 bg-background border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                   placeholder="20"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
                   Estimated Rehab Cost
                 </label>
                 <input
@@ -281,78 +283,80 @@ export default function NewDealModal({ onClose, onSuccess }: NewDealModalProps) 
                   step="500"
                   value={formData.estimated_rehab_cost}
                   onChange={(e) => setFormData({ ...formData, estimated_rehab_cost: e.target.value })}
-                  className="w-full px-4 py-3 bg-black/60 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all outline-none"
+                  className="w-full px-3 py-2 bg-background border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                   placeholder="15000"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
                   Expected Closing Date
                 </label>
                 <input
                   type="date"
                   value={formData.expected_closing_date}
                   onChange={(e) => setFormData({ ...formData, expected_closing_date: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-900/80 border border-gray-600/50 rounded-lg text-white focus:border-green-500/50 focus:ring-2 focus:ring-green-500/20 transition-all"
+                  className="w-full px-3 py-2 bg-background border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                 />
               </div>
             </div>
           </div>
 
           {/* Contact Information (Optional) */}
-          <div className="bg-black/40 border border-white/10 rounded-xl p-5 shadow-lg">
-            <h3 className="text-lg font-bold text-white mb-4">Contact Information <span className="text-xs text-gray-500 font-normal">(Optional)</span></h3>
+          <div className="border rounded-lg p-4 space-y-3">
+            <h3 className="font-semibold text-foreground">
+              Contact Information <span className="text-xs text-muted-foreground font-normal">(Optional)</span>
+            </h3>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
                   Realtor Name
                 </label>
                 <input
                   type="text"
                   value={formData.realtor_name}
                   onChange={(e) => setFormData({ ...formData, realtor_name: e.target.value })}
-                  className="w-full px-4 py-3 bg-black/60 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all outline-none"
+                  className="w-full px-3 py-2 bg-background border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                   placeholder="Jane Smith"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
                   Realtor Email
                 </label>
                 <input
                   type="email"
                   value={formData.realtor_email}
                   onChange={(e) => setFormData({ ...formData, realtor_email: e.target.value })}
-                  className="w-full px-4 py-3 bg-black/60 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all outline-none"
+                  className="w-full px-3 py-2 bg-background border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                   placeholder="jane@realty.com"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
                   Realtor Phone
                 </label>
                 <input
                   type="tel"
                   value={formData.realtor_phone}
                   onChange={(e) => setFormData({ ...formData, realtor_phone: e.target.value })}
-                  className="w-full px-4 py-3 bg-black/60 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all outline-none"
+                  className="w-full px-3 py-2 bg-background border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                   placeholder="(555) 123-4567"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
                   Seller Name
                 </label>
                 <input
                   type="text"
                   value={formData.seller_name}
                   onChange={(e) => setFormData({ ...formData, seller_name: e.target.value })}
-                  className="w-full px-4 py-3 bg-black/60 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all outline-none"
+                  className="w-full px-3 py-2 bg-background border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                   placeholder="John Doe"
                 />
               </div>
@@ -360,15 +364,15 @@ export default function NewDealModal({ onClose, onSuccess }: NewDealModalProps) 
           </div>
 
           {/* Notes */}
-          <div className="bg-black/40 border border-white/10 rounded-xl p-5 shadow-lg">
-            <label className="block text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
+          <div className="border rounded-lg p-4">
+            <label className="block text-sm font-medium text-muted-foreground mb-1">
               Notes
             </label>
             <textarea
-              rows={4}
+              rows={3}
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              className="w-full px-4 py-3 bg-black/60 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all resize-none outline-none"
+              className="w-full px-3 py-2 bg-background border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent resize-none"
               placeholder="Add any additional notes about this deal..."
             />
           </div>
@@ -379,22 +383,25 @@ export default function NewDealModal({ onClose, onSuccess }: NewDealModalProps) 
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="px-8 py-3 bg-black/60 border border-white/20 text-white rounded-lg hover:bg-black/80 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+              className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-8 py-3 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-lg hover:from-green-700 hover:to-green-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg shadow-green-500/20 font-semibold"
+              className="flex items-center gap-2 px-4 py-2 bg-accent text-accent-foreground rounded-lg hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
               {loading ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Creating Deal...
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                  Creating...
                 </>
               ) : (
-                'Create Deal'
+                <>
+                  <Plus className="w-4 h-4" />
+                  Create Deal
+                </>
               )}
             </button>
           </div>
