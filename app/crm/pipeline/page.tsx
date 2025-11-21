@@ -21,23 +21,22 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import {
-  LayoutDashboard,
   Plus,
   RefreshCw,
   TrendingUp,
   DollarSign,
-  CheckCircle,
-  Percent,
-  BarChart3,
-  ExternalLink,
+  ArrowLeft,
   Filter,
-  Settings,
-  Download,
-  Eye,
+  Search,
+  ChevronRight,
+  Activity,
   Target,
+  Info,
   Clock,
+  AlertCircle,
+  CheckCircle2,
 } from 'lucide-react';
-import { PipelineDeal, STAGE_LABELS, PIPELINE_STAGES } from '@/lib/pipeline/constants';
+import { PipelineDeal, STAGE_LABELS, STAGE_SHORT_LABELS, STAGE_DESCRIPTIONS, STAGE_COLORS, PIPELINE_STAGES, STAGE_PROBABILITY } from '@/lib/pipeline/constants';
 import NewDealModal from '@/components/pipeline/NewDealModal';
 import DealDetailModal from '@/components/pipeline/DealDetailModal';
 import { DraggableDealCard } from '@/components/pipeline/DraggableDealCard';
@@ -52,6 +51,7 @@ export default function PipelinePage() {
   const [activeDragDeal, setActiveDragDeal] = useState<PipelineDeal | null>(null);
   const [filterPriority, setFilterPriority] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<'compact' | 'detailed'>('compact');
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -98,11 +98,13 @@ export default function PipelinePage() {
     return matchesPriority && matchesSearch;
   });
 
-  // Group deals by stage
+  // Group deals by stage - Updated for new pipeline stages
   const dealsByStage = {
     loi_accepted: filteredDeals.filter(d => d.stage === 'loi_accepted'),
-    due_diligence: filteredDeals.filter(d => d.stage === 'due_diligence'),
-    contract: filteredDeals.filter(d => d.stage === 'contract'),
+    emd: filteredDeals.filter(d => d.stage === 'emd'),
+    psa: filteredDeals.filter(d => d.stage === 'psa'),
+    inspection: filteredDeals.filter(d => d.stage === 'inspection'),
+    title_escrow: filteredDeals.filter(d => d.stage === 'title_escrow'),
     closing: filteredDeals.filter(d => d.stage === 'closing'),
   };
 
@@ -167,12 +169,22 @@ export default function PipelinePage() {
     }).format(value);
   };
 
+  const calculateStageValue = (stageDeals: PipelineDeal[]) => {
+    return stageDeals.reduce((sum, deal) => sum + (deal.opportunity_value || 0), 0);
+  };
+
+  const calculateWeightedValue = (stageDeals: PipelineDeal[], stageName: string) => {
+    const probability = STAGE_PROBABILITY[stageName as keyof typeof STAGE_PROBABILITY] || 0;
+    const totalValue = calculateStageValue(stageDeals);
+    return (totalValue * probability) / 100;
+  };
+
   if (loading && deals.length === 0) {
     return (
-      <div className="min-h-screen py-12 px-4 flex items-center justify-center bg-gradient-to-br from-background via-background to-muted">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-4 border-accent border-t-transparent mx-auto mb-4"></div>
-          <p className="text-muted-foreground text-lg">Loading pipeline data...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent mx-auto"></div>
+          <p className="text-muted-foreground mt-4">Loading pipeline...</p>
         </div>
       </div>
     );
@@ -185,209 +197,240 @@ export default function PipelinePage() {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <main className="min-h-screen py-8 px-4 bg-gradient-to-br from-background via-background to-muted">
-        <div className="container mx-auto max-w-[1800px] space-y-6">
-          {/* Header */}
-          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 bg-card border-2 border-border rounded-2xl p-6 shadow-2xl">
-            <div className="flex items-center gap-4">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-accent/10 shadow-lg">
-                <Target className="w-7 h-7 text-accent" />
+      <main className="min-h-screen bg-background">
+        {/* Professional Header */}
+        <div className="border-b">
+          <div className="container mx-auto max-w-[1800px] px-4 py-6">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+              {/* Title Section */}
+              <div className="flex items-center gap-4">
+                <Link href="/crm" className="p-2 hover:bg-muted rounded-lg transition-colors">
+                  <ArrowLeft className="w-5 h-5 text-muted-foreground" />
+                </Link>
+                <div>
+                  <h1 className="text-3xl font-bold text-foreground">Deal Pipeline</h1>
+                  <p className="text-muted-foreground mt-1">Track deals from LOI to closing</p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-3xl md:text-4xl font-extrabold text-foreground">Sales Pipeline</h1>
-                <p className="text-muted-foreground mt-1">Track and manage deals from LOI to closing</p>
-              </div>
-            </div>
 
-            <div className="flex flex-wrap items-center gap-3">
-              <Link href="/crm">
-                <button className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-xl font-medium transition-all shadow-lg border-2 border-border">
-                  <ExternalLink className="w-4 h-4" />
-                  CRM
+              {/* Actions */}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setViewMode(viewMode === 'compact' ? 'detailed' : 'compact')}
+                  className="px-4 py-2 text-sm font-medium hover:bg-muted rounded-lg transition-colors"
+                >
+                  {viewMode === 'compact' ? 'Detailed' : 'Compact'} View
                 </button>
-              </Link>
-              <Link href="/crm/pipeline/analytics">
-                <button className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-xl font-medium transition-all shadow-lg border-2 border-border">
-                  <BarChart3 className="w-4 h-4" />
-                  Analytics
+                <button
+                  onClick={fetchData}
+                  disabled={loading}
+                  className="p-2 hover:bg-muted rounded-lg transition-colors disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                 </button>
-              </Link>
-              <button
-                onClick={fetchData}
-                disabled={loading}
-                className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-xl font-medium transition-all shadow-lg border-2 border-border disabled:opacity-50"
-              >
-                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                Refresh
-              </button>
-              <button
-                onClick={() => setShowNewDealModal(true)}
-                className="flex items-center gap-2 px-6 py-2.5 bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl hover:scale-105"
-              >
-                <Plus className="w-5 h-5" />
-                New Deal
-              </button>
+                <button
+                  onClick={() => setShowNewDealModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent/90 text-accent-foreground rounded-lg text-sm font-medium transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  New Deal
+                </button>
+              </div>
             </div>
           </div>
+        </div>
 
-          {/* Filters and Search */}
-          <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center bg-card border-2 border-border rounded-xl p-4 shadow-lg">
-            <div className="flex items-center gap-2 flex-1">
-              <Filter className="w-5 h-5 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Search by property address or agent..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1 px-4 py-2 bg-muted border-2 border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent transition-colors"
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground whitespace-nowrap">Priority:</span>
-              <select
-                value={filterPriority}
-                onChange={(e) => setFilterPriority(e.target.value)}
-                className="px-4 py-2 bg-muted border-2 border-border rounded-lg text-foreground focus:outline-none focus:border-accent transition-colors"
-              >
-                <option value="all">All Priorities</option>
-                <option value="urgent">Urgent</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Summary Cards */}
+        <div className="container mx-auto max-w-[1800px] px-4 py-6 space-y-6">
+          {/* Key Metrics - Clean Cards */}
           {summary && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card className="p-6 bg-gradient-to-br from-card to-card/50 border-2 border-border shadow-xl hover:shadow-2xl transition-all hover:scale-105 cursor-pointer group">
-                <div className="flex items-center justify-between">
+              <Card className="p-6 border-2">
+                <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1 flex items-center gap-2">
-                      <Eye className="w-4 h-4" />
-                      Active Deals
+                    <p className="text-sm text-muted-foreground">Active Deals</p>
+                    <p className="text-2xl font-bold text-foreground mt-1">
+                      {summary.allTime?.total_active_deals || 0}
                     </p>
-                    <p className="text-4xl font-extrabold text-foreground group-hover:text-accent transition-colors">
-                      {summary.allTime.total_active_deals}
+                    <p className="text-xs text-muted-foreground mt-2">
+                      {formatCurrency(summary.allTime?.active_pipeline_value || 0)} total
                     </p>
                   </div>
-                  <div className="w-14 h-14 rounded-xl bg-accent/10 flex items-center justify-center group-hover:bg-accent/20 transition-colors">
-                    <TrendingUp className="w-7 h-7 text-accent" />
-                  </div>
+                  <Target className="w-5 h-5 text-muted-foreground" />
                 </div>
               </Card>
 
-              <Card className="p-6 bg-gradient-to-br from-card to-card/50 border-2 border-border shadow-xl hover:shadow-2xl transition-all hover:scale-105 cursor-pointer group">
-                <div className="flex items-center justify-between">
+              <Card className="p-6 border-2">
+                <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1 flex items-center gap-2">
-                      <DollarSign className="w-4 h-4" />
-                      Pipeline Value
+                    <p className="text-sm text-muted-foreground">Weighted Pipeline</p>
+                    <p className="text-2xl font-bold text-foreground mt-1">
+                      {formatCurrency(summary.allTime?.weighted_pipeline_value || 0)}
                     </p>
-                    <p className="text-3xl font-extrabold text-foreground group-hover:text-accent transition-colors">
-                      {formatCurrency(summary.allTime.active_pipeline_value || 0)}
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Based on probability
                     </p>
                   </div>
-                  <div className="w-14 h-14 rounded-xl bg-accent/10 flex items-center justify-center group-hover:bg-accent/20 transition-colors">
-                    <DollarSign className="w-7 h-7 text-accent" />
-                  </div>
+                  <TrendingUp className="w-5 h-5 text-muted-foreground" />
                 </div>
               </Card>
 
-              <Card className="p-6 bg-gradient-to-br from-card to-card/50 border-2 border-border shadow-xl hover:shadow-2xl transition-all hover:scale-105 cursor-pointer group">
-                <div className="flex items-center justify-between">
+              <Card className="p-6 border-2">
+                <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1 flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4" />
-                      Won This Month
+                    <p className="text-sm text-muted-foreground">Won This Month</p>
+                    <p className="text-2xl font-bold text-foreground mt-1">
+                      {summary.timeRange?.total_won || 0}
                     </p>
-                    <p className="text-4xl font-extrabold text-foreground group-hover:text-accent transition-colors">
-                      {summary.timeRange.total_won}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {formatCurrency(summary.timeRange.won_value || 0)}
+                    <p className="text-xs text-muted-foreground mt-2">
+                      {formatCurrency(summary.timeRange?.won_value || 0)}
                     </p>
                   </div>
-                  <div className="w-14 h-14 rounded-xl bg-accent/10 flex items-center justify-center group-hover:bg-accent/20 transition-colors">
-                    <CheckCircle className="w-7 h-7 text-accent" />
-                  </div>
+                  <CheckCircle2 className="w-5 h-5 text-green-500" />
                 </div>
               </Card>
 
-              <Card className="p-6 bg-gradient-to-br from-card to-card/50 border-2 border-border shadow-xl hover:shadow-2xl transition-all hover:scale-105 cursor-pointer group">
-                <div className="flex items-center justify-between">
+              <Card className="p-6 border-2">
+                <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1 flex items-center gap-2">
-                      <Percent className="w-4 h-4" />
-                      Conversion Rate
+                    <p className="text-sm text-muted-foreground">Conversion Rate</p>
+                    <p className="text-2xl font-bold text-foreground mt-1">
+                      {summary.allTime?.overall_conversion_rate || 0}%
                     </p>
-                    <p className="text-4xl font-extrabold text-accent group-hover:scale-110 transition-transform">
-                      {summary.allTime.overall_conversion_rate || 0}%
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Avg: {summary.allTime?.avg_days_to_close || 0} days
                     </p>
                   </div>
-                  <div className="w-14 h-14 rounded-xl bg-accent/10 flex items-center justify-center group-hover:bg-accent/20 transition-colors">
-                    <Percent className="w-7 h-7 text-accent" />
-                  </div>
+                  <Activity className="w-5 h-5 text-muted-foreground" />
                 </div>
               </Card>
             </div>
           )}
 
-          {/* Kanban Board */}
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            {/* LOI Accepted Column */}
-            <DroppableStageColumn
-              stage="loi_accepted"
-              deals={dealsByStage.loi_accepted}
-              onDealClick={setSelectedDealId}
-              onRefresh={fetchData}
-            />
+          {/* Search and Filters */}
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search properties or agents..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-background border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+              />
+            </div>
 
-            {/* Due Diligence Column */}
-            <DroppableStageColumn
-              stage="due_diligence"
-              deals={dealsByStage.due_diligence}
-              onDealClick={setSelectedDealId}
-              onRefresh={fetchData}
-            />
+            <select
+              value={filterPriority}
+              onChange={(e) => setFilterPriority(e.target.value)}
+              className="px-4 py-2 bg-background border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+            >
+              <option value="all">All Priorities</option>
+              <option value="urgent">Urgent</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
 
-            {/* Contract Column */}
-            <DroppableStageColumn
-              stage="contract"
-              deals={dealsByStage.contract}
-              onDealClick={setSelectedDealId}
-              onRefresh={fetchData}
-            />
+          {/* Pipeline Stages - Modern Kanban Board */}
+          <div className="overflow-x-auto pb-4">
+            <div className="grid grid-cols-6 gap-4 min-w-[1200px]">
+              {/* LOI Accepted */}
+              <DroppableStageColumn
+                stage="loi_accepted"
+                deals={dealsByStage.loi_accepted}
+                onDealClick={setSelectedDealId}
+                onRefresh={fetchData}
+                compact={viewMode === 'compact'}
+              />
 
-            {/* Closing Column */}
-            <DroppableStageColumn
-              stage="closing"
-              deals={dealsByStage.closing}
-              onDealClick={setSelectedDealId}
-              onRefresh={fetchData}
-            />
+              {/* EMD */}
+              <DroppableStageColumn
+                stage="emd"
+                deals={dealsByStage.emd}
+                onDealClick={setSelectedDealId}
+                onRefresh={fetchData}
+                compact={viewMode === 'compact'}
+              />
+
+              {/* PSA */}
+              <DroppableStageColumn
+                stage="psa"
+                deals={dealsByStage.psa}
+                onDealClick={setSelectedDealId}
+                onRefresh={fetchData}
+                compact={viewMode === 'compact'}
+              />
+
+              {/* Inspection */}
+              <DroppableStageColumn
+                stage="inspection"
+                deals={dealsByStage.inspection}
+                onDealClick={setSelectedDealId}
+                onRefresh={fetchData}
+                compact={viewMode === 'compact'}
+              />
+
+              {/* Title & Escrow */}
+              <DroppableStageColumn
+                stage="title_escrow"
+                deals={dealsByStage.title_escrow}
+                onDealClick={setSelectedDealId}
+                onRefresh={fetchData}
+                compact={viewMode === 'compact'}
+              />
+
+              {/* Closing */}
+              <DroppableStageColumn
+                stage="closing"
+                deals={dealsByStage.closing}
+                onDealClick={setSelectedDealId}
+                onRefresh={fetchData}
+                compact={viewMode === 'compact'}
+              />
+            </div>
+          </div>
+
+          {/* Pipeline Flow Indicator */}
+          <div className="bg-muted/30 rounded-lg p-4">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <ChevronRight className="w-3 h-3" />
+                <span>LOI</span>
+              </div>
+              <div className="flex-1 h-px bg-border mx-2"></div>
+              <span>EMD</span>
+              <div className="flex-1 h-px bg-border mx-2"></div>
+              <span>PSA</span>
+              <div className="flex-1 h-px bg-border mx-2"></div>
+              <span>Inspection</span>
+              <div className="flex-1 h-px bg-border mx-2"></div>
+              <span>Title & Escrow</span>
+              <div className="flex-1 h-px bg-border mx-2"></div>
+              <span>Closing</span>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-px bg-border mx-2"></div>
+                <CheckCircle2 className="w-3 h-3" />
+              </div>
+            </div>
           </div>
 
           {/* Empty State */}
           {filteredDeals.length === 0 && !loading && (
-            <div className="text-center py-20">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-muted mb-6">
-                <Target className="w-10 h-10 text-muted-foreground" />
-              </div>
-              <h3 className="text-2xl font-bold text-foreground mb-2">No deals found</h3>
-              <p className="text-muted-foreground mb-6">
+            <div className="text-center py-16">
+              <Target className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+              <h3 className="text-lg font-semibold text-foreground mb-2">No deals found</h3>
+              <p className="text-muted-foreground mb-6 text-sm">
                 {searchQuery || filterPriority !== 'all'
                   ? 'Try adjusting your filters'
-                  : 'Get started by creating your first deal'}
+                  : 'Start by creating your first deal'}
               </p>
               {!searchQuery && filterPriority === 'all' && (
                 <button
                   onClick={() => setShowNewDealModal(true)}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl font-semibold transition-all shadow-lg"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent/90 text-accent-foreground rounded-lg text-sm font-medium transition-colors"
                 >
-                  <Plus className="w-5 h-5" />
+                  <Plus className="w-4 h-4" />
                   Create First Deal
                 </button>
               )}
@@ -398,11 +441,12 @@ export default function PipelinePage() {
         {/* Drag Overlay */}
         <DragOverlay>
           {activeDragDeal ? (
-            <div className="opacity-80">
+            <div className="opacity-90">
               <DraggableDealCard
                 deal={activeDragDeal}
                 onDealClick={() => {}}
                 isDragging={true}
+                compact={viewMode === 'compact'}
               />
             </div>
           ) : null}

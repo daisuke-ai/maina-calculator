@@ -2,11 +2,13 @@
 // Pipeline Constants and Types
 // =====================================================
 
-// Pipeline Stages
+// Pipeline Stages - Refined Real Estate Acquisition Flow
 export const PIPELINE_STAGES = {
   LOI_ACCEPTED: 'loi_accepted',
-  DUE_DILIGENCE: 'due_diligence',
-  CONTRACT: 'contract',
+  EMD: 'emd',
+  PSA: 'psa',
+  INSPECTION: 'inspection',
+  TITLE_ESCROW: 'title_escrow',
   CLOSING: 'closing',
   WON: 'won',
   LOST: 'lost',
@@ -14,31 +16,61 @@ export const PIPELINE_STAGES = {
 
 export type PipelineStage = typeof PIPELINE_STAGES[keyof typeof PIPELINE_STAGES];
 
-// Pipeline Stage Labels
+// Pipeline Stage Labels with Descriptions
 export const STAGE_LABELS: Record<PipelineStage, string> = {
-  loi_accepted: 'LOI Accepted',
-  due_diligence: 'Due Diligence',
-  contract: 'Contract',
+  loi_accepted: 'LOI / Offer Accepted',
+  emd: 'Earnest Money Deposit',
+  psa: 'Purchase & Sale Agreement',
+  inspection: 'Inspection / Due Diligence',
+  title_escrow: 'Title & Escrow Review',
   closing: 'Closing',
-  won: 'Won',
+  won: 'Closed',
   lost: 'Lost',
 };
 
-// Pipeline Stage Colors (for UI)
+// Pipeline Stage Short Labels (for compact view)
+export const STAGE_SHORT_LABELS: Record<PipelineStage, string> = {
+  loi_accepted: 'LOI',
+  emd: 'EMD',
+  psa: 'PSA',
+  inspection: 'Inspection',
+  title_escrow: 'Title & Escrow',
+  closing: 'Closing',
+  won: 'Closed',
+  lost: 'Lost',
+};
+
+// Pipeline Stage Descriptions
+export const STAGE_DESCRIPTIONS: Record<PipelineStage, string> = {
+  loi_accepted: 'Preliminary terms outlined, both parties agreed to move forward',
+  emd: 'Good faith deposit showing buyer commitment (1-5% of purchase price)',
+  psa: 'Legally binding contract with detailed terms and contingencies',
+  inspection: 'Physical, financial, and compliance due diligence (7-10 days typical)',
+  title_escrow: 'Title verification, lien resolution, and closing preparation',
+  closing: 'Final transfer of ownership and fund disbursement',
+  won: 'Deal successfully completed',
+  lost: 'Deal terminated or withdrawn',
+};
+
+// Pipeline Stage Colors (Modern, Professional Palette)
 export const STAGE_COLORS: Record<PipelineStage, string> = {
-  loi_accepted: '#10B981', // green-500
-  due_diligence: '#3B82F6', // blue-500
-  contract: '#F59E0B', // amber-500
-  closing: '#8B5CF6', // purple-500
-  won: '#059669', // green-600
-  lost: '#EF4444', // red-500
+  loi_accepted: '#22c55e', // Emerald green - initial success
+  emd: '#3b82f6', // Blue - commitment
+  psa: '#8b5cf6', // Purple - formal agreement
+  inspection: '#f59e0b', // Amber - caution/review
+  title_escrow: '#06b6d4', // Cyan - verification
+  closing: '#ec4899', // Pink - final stage
+  won: '#16a34a', // Green - success
+  lost: '#ef4444', // Red - failure
 };
 
 // Pipeline Stage Order
 export const STAGE_ORDER: PipelineStage[] = [
   'loi_accepted',
-  'due_diligence',
-  'contract',
+  'emd',
+  'psa',
+  'inspection',
+  'title_escrow',
   'closing',
   'won',
   'lost',
@@ -46,9 +78,11 @@ export const STAGE_ORDER: PipelineStage[] = [
 
 // Valid Stage Transitions
 export const VALID_TRANSITIONS: Record<PipelineStage, PipelineStage[]> = {
-  loi_accepted: ['due_diligence', 'lost'],
-  due_diligence: ['contract', 'lost'],
-  contract: ['closing', 'lost'],
+  loi_accepted: ['emd', 'lost'],
+  emd: ['psa', 'lost'],
+  psa: ['inspection', 'lost'],
+  inspection: ['title_escrow', 'psa', 'lost'], // Can go back to PSA for renegotiation
+  title_escrow: ['closing', 'lost'],
   closing: ['won', 'lost'],
   won: [],
   lost: [],
@@ -56,9 +90,11 @@ export const VALID_TRANSITIONS: Record<PipelineStage, PipelineStage[]> = {
 
 // Probability to Close by Stage
 export const STAGE_PROBABILITY: Record<PipelineStage, number> = {
-  loi_accepted: 50,
-  due_diligence: 65,
-  contract: 80,
+  loi_accepted: 25,
+  emd: 40,
+  psa: 55,
+  inspection: 70,
+  title_escrow: 85,
   closing: 95,
   won: 100,
   lost: 0,

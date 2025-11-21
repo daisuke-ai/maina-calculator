@@ -191,6 +191,26 @@ export function ResultsTable({
         numValue,
         propertyData
       )
+    } else if (editingRow === 'monthly_payment') {
+      newOffers[editingColumn] = dynamicRecalculator.recalculateFromMonthlyPayment(
+        editableOffers[editingColumn],
+        numValue,
+        propertyData
+      )
+    } else if (editingRow === 'balloon_year') {
+      newOffers[editingColumn] = dynamicRecalculator.recalculateFromBalloonPeriod(
+        editableOffers[editingColumn],
+        numValue,
+        propertyData
+      )
+    } else if (editingRow === 'rehab_cost') {
+      // Enforce minimum rehab cost of $6000
+      const validRehabCost = Math.max(numValue, 6000)
+      newOffers[editingColumn] = dynamicRecalculator.recalculateFromRehabCost(
+        editableOffers[editingColumn],
+        validRehabCost,
+        propertyData
+      )
     }
 
     setEditableOffers(newOffers)

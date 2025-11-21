@@ -249,6 +249,123 @@ export class DynamicRecalculator {
   }
 
   /**
+   * Recalculate offer when Monthly Payment is edited
+   */
+  recalculateFromMonthlyPayment(
+    currentOffer: OfferResult,
+    newMonthlyPayment: number,
+    propertyData: PropertyData
+  ): OfferResult {
+    const offer = { ...currentOffer }
+
+    // Update monthly payment
+    offer.monthly_payment = newMonthlyPayment
+
+    // Recalculate amortization period based on new monthly payment
+    // loan_amount = monthly_payment * months
+    // months = loan_amount / monthly_payment
+    if (newMonthlyPayment > 0) {
+      const totalMonths = offer.loan_amount / newMonthlyPayment
+      offer.amortization_years = totalMonths / 12
+    }
+
+    // Recalculate cash flow
+    const nonDebtExpenses = this.calculateNonDebtExpenses(propertyData)
+    offer.final_monthly_cash_flow = propertyData.monthly_rent - nonDebtExpenses - newMonthlyPayment
+
+    // Recalculate net rental yield
+    const annualNetIncome = offer.final_monthly_cash_flow * 12
+    offer.net_rental_yield = (annualNetIncome / offer.final_entry_fee_amount) * 100
+
+    // Recalculate COC for backward compatibility
+    offer.final_coc_percent = offer.net_rental_yield
+
+    // Recalculate balloon payment
+    const principalPaid = newMonthlyPayment * 12 * offer.balloon_period
+    offer.balloon_payment = offer.loan_amount - principalPaid
+    offer.principal_paid = principalPaid
+
+    // Update viability
+    const viability = this.evaluateDealViability(offer, propertyData)
+    offer.deal_viability = viability.viability
+    offer.viability_reasons = viability.reasons
+
+    return offer
+  }
+
+  /**
+   * Recalculate offer when Balloon Period is edited
+   */
+  recalculateFromBalloonPeriod(
+    currentOffer: OfferResult,
+    newBalloonPeriod: number,
+    propertyData: PropertyData
+  ): OfferResult {
+    const offer = { ...currentOffer }
+
+    // Update balloon period
+    offer.balloon_period = newBalloonPeriod
+
+    // Recalculate principal paid during balloon period
+    const principalPaid = offer.monthly_payment * 12 * newBalloonPeriod
+    offer.principal_paid = principalPaid
+
+    // Recalculate balloon payment
+    offer.balloon_payment = offer.loan_amount - principalPaid
+
+    // Recalculate appreciation profit based on new time period
+    const futureValue = propertyData.listed_price * Math.pow(1 + this.config.appreciation_per_year, newBalloonPeriod)
+    offer.appreciation_profit = futureValue - offer.final_offer_price
+
+    // Update viability
+    const viability = this.evaluateDealViability(offer, propertyData)
+    offer.deal_viability = viability.viability
+    offer.viability_reasons = viability.reasons
+
+    return offer
+  }
+
+  /**
+   * Recalculate offer when Rehab Cost is edited
+   */
+  recalculateFromRehabCost(
+    currentOffer: OfferResult,
+    newRehabCost: number,
+    propertyData: PropertyData
+  ): OfferResult {
+    const offer = { ...currentOffer }
+
+    // Enforce minimum rehab cost ($6,000)
+    const MIN_REHAB_COST = 6000
+    const validRehabCost = Math.max(newRehabCost, MIN_REHAB_COST)
+
+    // Update rehab cost
+    offer.rehab_cost = validRehabCost
+
+    // Recalculate entry fee components
+    const closingCost = offer.final_offer_price * this.config.closing_cost_percent_of_offer
+    const assignmentFee = 5000
+
+    // Entry fee = Down Payment + Rehab + Closing + Assignment
+    offer.final_entry_fee_amount = offer.down_payment + validRehabCost + closingCost + assignmentFee
+    offer.final_entry_fee_percent = (offer.final_entry_fee_amount / offer.final_offer_price) * 100
+
+    // Recalculate net rental yield (it's based on entry fee)
+    const annualNetIncome = offer.final_monthly_cash_flow * 12
+    offer.net_rental_yield = (annualNetIncome / offer.final_entry_fee_amount) * 100
+
+    // Recalculate COC for backward compatibility
+    offer.final_coc_percent = offer.net_rental_yield
+
+    // Update viability
+    const viability = this.evaluateDealViability(offer, propertyData)
+    offer.deal_viability = viability.viability
+    offer.viability_reasons = viability.reasons
+
+    return offer
+  }
+
+  /**
    * Get recommended down payment range for an offer price
    */
   getRecommendedDownPaymentRange(offerPrice: number): { min: number; max: number } {
