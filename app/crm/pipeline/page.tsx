@@ -53,7 +53,6 @@ import NewDealModal from '@/components/pipeline/NewDealModal';
 import DealDetailModal from '@/components/pipeline/DealDetailModal';
 import { DraggableDealCard } from '@/components/pipeline/DraggableDealCard';
 import { DroppableStageColumn } from '@/components/pipeline/DroppableStageColumn';
-import EmailRepliesModal from '@/components/pipeline/EmailRepliesModal';
 
 export default function PipelinePage() {
   const [deals, setDeals] = useState<PipelineDeal[]>([]);
@@ -67,7 +66,6 @@ export default function PipelinePage() {
   const [viewMode, setViewMode] = useState<'compact' | 'detailed'>('compact');
   const [pipelineType, setPipelineType] = useState<PipelineType>('acquisition');
   const [pipelineView, setPipelineView] = useState<'active' | 'closed'>('active');
-  const [showEmailReplies, setShowEmailReplies] = useState(false);
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -305,13 +303,12 @@ export default function PipelinePage() {
                 >
                   <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                 </button>
-                <button
-                  onClick={() => setShowEmailReplies(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg text-sm font-medium transition-colors"
-                >
-                  <Mail className="w-4 h-4" />
-                  Email Replies
-                </button>
+                <Link href="/crm/mailbox">
+                  <button className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg text-sm font-medium transition-colors">
+                    <Mail className="w-4 h-4" />
+                    Mailbox
+                  </button>
+                </Link>
                 <button
                   onClick={() => setShowNewDealModal(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent/90 text-accent-foreground rounded-lg text-sm font-medium transition-colors"
@@ -591,12 +588,6 @@ export default function PipelinePage() {
           onUpdate={fetchData}
         />
       )}
-
-      {/* Email Replies Modal */}
-      <EmailRepliesModal
-        isOpen={showEmailReplies}
-        onClose={() => setShowEmailReplies(false)}
-      />
     </DndContext>
   );
 }
