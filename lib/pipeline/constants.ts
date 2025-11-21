@@ -2,8 +2,22 @@
 // Pipeline Constants and Types
 // =====================================================
 
-// Pipeline Stages - Refined Real Estate Acquisition Flow
-export const PIPELINE_STAGES = {
+// Pipeline Types
+export const PIPELINE_TYPES = {
+  ACQUISITION: 'acquisition',
+  ESCROW: 'escrow',
+} as const;
+
+export type PipelineType = typeof PIPELINE_TYPES[keyof typeof PIPELINE_TYPES];
+
+// Pipeline Type Labels
+export const PIPELINE_TYPE_LABELS: Record<PipelineType, string> = {
+  acquisition: 'Acquisition Pipeline',
+  escrow: 'Escrow in Seller Financing',
+};
+
+// Acquisition Pipeline Stages - Refined Real Estate Acquisition Flow
+export const ACQUISITION_STAGES = {
   LOI_ACCEPTED: 'loi_accepted',
   EMD: 'emd',
   PSA: 'psa',
@@ -14,91 +28,189 @@ export const PIPELINE_STAGES = {
   LOST: 'lost',
 } as const;
 
+// Escrow Pipeline Stages - Escrow in Seller Financing Deal
+export const ESCROW_STAGES = {
+  OFFER_ACCEPTED: 'offer_accepted',
+  OPEN_ESCROW: 'open_escrow',
+  DUE_DILIGENCE: 'due_diligence',
+  CLEARING_CONTINGENCIES: 'clearing_contingencies',
+  FINAL_WALKTHROUGH: 'final_walkthrough',
+  CLOSING: 'closing',
+  WON: 'won',
+  LOST: 'lost',
+} as const;
+
+// Combined pipeline stages type
+export const PIPELINE_STAGES = {
+  ...ACQUISITION_STAGES,
+  ...ESCROW_STAGES,
+} as const;
+
 export type PipelineStage = typeof PIPELINE_STAGES[keyof typeof PIPELINE_STAGES];
 
 // Pipeline Stage Labels with Descriptions
-export const STAGE_LABELS: Record<PipelineStage, string> = {
+export const STAGE_LABELS: Record<string, string> = {
+  // Acquisition Pipeline
   loi_accepted: 'LOI / Offer Accepted',
   emd: 'Earnest Money Deposit',
   psa: 'Purchase & Sale Agreement',
   inspection: 'Inspection / Due Diligence',
   title_escrow: 'Title & Escrow Review',
   closing: 'Closing',
+  // Escrow Pipeline
+  offer_accepted: 'Offer Accepted',
+  open_escrow: 'Open Escrow',
+  due_diligence: 'Due Diligence Period',
+  clearing_contingencies: 'Clearing Contingencies',
+  final_walkthrough: 'Final Walk-Through',
+  // Common
   won: 'Closed',
   lost: 'Lost',
 };
 
 // Pipeline Stage Short Labels (for compact view)
-export const STAGE_SHORT_LABELS: Record<PipelineStage, string> = {
+export const STAGE_SHORT_LABELS: Record<string, string> = {
+  // Acquisition Pipeline
   loi_accepted: 'LOI',
   emd: 'EMD',
   psa: 'PSA',
   inspection: 'Inspection',
   title_escrow: 'Title & Escrow',
   closing: 'Closing',
+  // Escrow Pipeline
+  offer_accepted: 'Offer',
+  open_escrow: 'Escrow',
+  due_diligence: 'Due Diligence',
+  clearing_contingencies: 'Contingencies',
+  final_walkthrough: 'Walk-Through',
+  // Common
   won: 'Closed',
   lost: 'Lost',
 };
 
 // Pipeline Stage Descriptions
-export const STAGE_DESCRIPTIONS: Record<PipelineStage, string> = {
+export const STAGE_DESCRIPTIONS: Record<string, string> = {
+  // Acquisition Pipeline
   loi_accepted: 'Preliminary terms outlined, both parties agreed to move forward',
   emd: 'Good faith deposit showing buyer commitment (1-5% of purchase price)',
   psa: 'Legally binding contract with detailed terms and contingencies',
   inspection: 'Physical, financial, and compliance due diligence (7-10 days typical)',
   title_escrow: 'Title verification, lien resolution, and closing preparation',
   closing: 'Final transfer of ownership and fund disbursement',
+  // Escrow Pipeline
+  offer_accepted: 'Buyer makes offer and seller accepts it',
+  open_escrow: 'Neutral third party agreed, earnest money deposited',
+  due_diligence: 'Inspections and title search to confirm no major issues',
+  clearing_contingencies: 'Negotiate repairs or price, remove contingencies',
+  final_walkthrough: 'Final inspection and signing of closing documents',
+  // Common
   won: 'Deal successfully completed',
   lost: 'Deal terminated or withdrawn',
 };
 
 // Pipeline Stage Colors (Modern, Professional Palette)
-export const STAGE_COLORS: Record<PipelineStage, string> = {
+export const STAGE_COLORS: Record<string, string> = {
+  // Acquisition Pipeline
   loi_accepted: '#22c55e', // Emerald green - initial success
   emd: '#3b82f6', // Blue - commitment
   psa: '#8b5cf6', // Purple - formal agreement
   inspection: '#f59e0b', // Amber - caution/review
   title_escrow: '#06b6d4', // Cyan - verification
   closing: '#ec4899', // Pink - final stage
+  // Escrow Pipeline
+  offer_accepted: '#22c55e', // Emerald green - offer accepted
+  open_escrow: '#3b82f6', // Blue - escrow opened
+  due_diligence: '#f59e0b', // Amber - inspection period
+  clearing_contingencies: '#8b5cf6', // Purple - negotiations
+  final_walkthrough: '#06b6d4', // Cyan - final review
+  // Common
   won: '#16a34a', // Green - success
   lost: '#ef4444', // Red - failure
 };
 
-// Pipeline Stage Order
-export const STAGE_ORDER: PipelineStage[] = [
-  'loi_accepted',
-  'emd',
-  'psa',
-  'inspection',
-  'title_escrow',
-  'closing',
-  'won',
-  'lost',
-];
-
-// Valid Stage Transitions
-export const VALID_TRANSITIONS: Record<PipelineStage, PipelineStage[]> = {
-  loi_accepted: ['emd', 'lost'],
-  emd: ['psa', 'lost'],
-  psa: ['inspection', 'lost'],
-  inspection: ['title_escrow', 'psa', 'lost'], // Can go back to PSA for renegotiation
-  title_escrow: ['closing', 'lost'],
-  closing: ['won', 'lost'],
-  won: [],
-  lost: [],
+// Get Stage Order by Pipeline Type
+export const getStageOrder = (pipelineType: PipelineType): string[] => {
+  if (pipelineType === 'escrow') {
+    return [
+      'offer_accepted',
+      'open_escrow',
+      'due_diligence',
+      'clearing_contingencies',
+      'final_walkthrough',
+      'closing',
+    ];
+  }
+  // Default: acquisition
+  return [
+    'loi_accepted',
+    'emd',
+    'psa',
+    'inspection',
+    'title_escrow',
+    'closing',
+  ];
 };
 
-// Probability to Close by Stage
-export const STAGE_PROBABILITY: Record<PipelineStage, number> = {
-  loi_accepted: 25,
-  emd: 40,
-  psa: 55,
-  inspection: 70,
-  title_escrow: 85,
-  closing: 95,
-  won: 100,
-  lost: 0,
+// Get Valid Transitions by Pipeline Type
+export const getValidTransitions = (pipelineType: PipelineType): Record<string, string[]> => {
+  if (pipelineType === 'escrow') {
+    return {
+      offer_accepted: ['open_escrow', 'lost'],
+      open_escrow: ['due_diligence', 'lost'],
+      due_diligence: ['clearing_contingencies', 'lost'],
+      clearing_contingencies: ['final_walkthrough', 'due_diligence', 'lost'], // Can go back for renegotiation
+      final_walkthrough: ['closing', 'lost'],
+      closing: ['won', 'lost'],
+      won: [],
+      lost: [],
+    };
+  }
+  // Default: acquisition
+  return {
+    loi_accepted: ['emd', 'lost'],
+    emd: ['psa', 'lost'],
+    psa: ['inspection', 'lost'],
+    inspection: ['title_escrow', 'psa', 'lost'], // Can go back to PSA for renegotiation
+    title_escrow: ['closing', 'lost'],
+    closing: ['won', 'lost'],
+    won: [],
+    lost: [],
+  };
 };
+
+// Legacy exports for backward compatibility
+export const STAGE_ORDER: string[] = getStageOrder('acquisition');
+export const VALID_TRANSITIONS: Record<string, string[]> = getValidTransitions('acquisition');
+
+// Get Stage Probability by Pipeline Type
+export const getStageProbability = (pipelineType: PipelineType): Record<string, number> => {
+  if (pipelineType === 'escrow') {
+    return {
+      offer_accepted: 30,
+      open_escrow: 45,
+      due_diligence: 60,
+      clearing_contingencies: 75,
+      final_walkthrough: 90,
+      closing: 95,
+      won: 100,
+      lost: 0,
+    };
+  }
+  // Default: acquisition
+  return {
+    loi_accepted: 25,
+    emd: 40,
+    psa: 55,
+    inspection: 70,
+    title_escrow: 85,
+    closing: 95,
+    won: 100,
+    lost: 0,
+  };
+};
+
+// Legacy export for backward compatibility
+export const STAGE_PROBABILITY: Record<string, number> = getStageProbability('acquisition');
 
 // Deal Statuses
 export const DEAL_STATUS = {
@@ -316,6 +428,7 @@ export interface PipelineDeal {
   seller_phone?: string;
 
   // Pipeline
+  pipeline_type: PipelineType;
   stage: PipelineStage;
   status: DealStatus;
 
@@ -436,7 +549,7 @@ export interface PipelineForecast {
 /**
  * Check if a stage transition is valid
  */
-export function isValidTransition(fromStage: PipelineStage, toStage: PipelineStage): boolean {
+export function isValidTransition(fromStage: string, toStage: string): boolean {
   const allowedTransitions = VALID_TRANSITIONS[fromStage] || [];
   return allowedTransitions.includes(toStage);
 }
@@ -444,7 +557,7 @@ export function isValidTransition(fromStage: PipelineStage, toStage: PipelineSta
 /**
  * Get the next valid stages for a given stage
  */
-export function getNextStages(currentStage: PipelineStage): PipelineStage[] {
+export function getNextStages(currentStage: string): string[] {
   return VALID_TRANSITIONS[currentStage] || [];
 }
 

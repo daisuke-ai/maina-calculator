@@ -8,17 +8,19 @@ import {
 import { Card } from '@/components/ui/card';
 import {
   PipelineDeal,
+  PipelineType,
   STAGE_LABELS,
   STAGE_SHORT_LABELS,
   STAGE_COLORS,
   STAGE_DESCRIPTIONS,
-  STAGE_PROBABILITY
+  getStageProbability,
 } from '@/lib/pipeline/constants';
 import { DraggableDealCard } from './DraggableDealCard';
 import { Plus, Info, DollarSign, TrendingUp } from 'lucide-react';
 
 interface DroppableStageColumnProps {
   stage: string;
+  pipelineType: PipelineType;
   deals: PipelineDeal[];
   onDealClick: (dealId: string) => void;
   onRefresh: () => void;
@@ -27,6 +29,7 @@ interface DroppableStageColumnProps {
 
 export function DroppableStageColumn({
   stage,
+  pipelineType,
   deals,
   onDealClick,
   onRefresh,
@@ -37,7 +40,8 @@ export function DroppableStageColumn({
   });
 
   const totalValue = deals.reduce((sum, deal) => sum + (deal.opportunity_value || 0), 0);
-  const probability = STAGE_PROBABILITY[stage as keyof typeof STAGE_PROBABILITY] || 0;
+  const stageProbabilities = getStageProbability(pipelineType);
+  const probability = stageProbabilities[stage] || 0;
   const weightedValue = (totalValue * probability) / 100;
 
   const formatCurrency = (value: number) => {

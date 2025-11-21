@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import {
@@ -36,7 +36,18 @@ import {
   AlertCircle,
   CheckCircle2,
 } from 'lucide-react';
-import { PipelineDeal, STAGE_LABELS, STAGE_SHORT_LABELS, STAGE_DESCRIPTIONS, STAGE_COLORS, PIPELINE_STAGES, STAGE_PROBABILITY } from '@/lib/pipeline/constants';
+import {
+  PipelineDeal,
+  PipelineType,
+  PIPELINE_TYPE_LABELS,
+  STAGE_LABELS,
+  STAGE_SHORT_LABELS,
+  STAGE_DESCRIPTIONS,
+  STAGE_COLORS,
+  getStageOrder,
+  getValidTransitions,
+  getStageProbability,
+} from '@/lib/pipeline/constants';
 import NewDealModal from '@/components/pipeline/NewDealModal';
 import DealDetailModal from '@/components/pipeline/DealDetailModal';
 import { DraggableDealCard } from '@/components/pipeline/DraggableDealCard';
@@ -52,6 +63,7 @@ export default function PipelinePage() {
   const [filterPriority, setFilterPriority] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'compact' | 'detailed'>('compact');
+  const [pipelineType, setPipelineType] = useState<PipelineType>('acquisition');
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -91,22 +103,23 @@ export default function PipelinePage() {
 
   // Filter deals
   const filteredDeals = deals.filter(deal => {
+    const matchesPipelineType = deal.pipeline_type === pipelineType || !deal.pipeline_type; // Support legacy deals without pipeline_type
     const matchesPriority = filterPriority === 'all' || deal.priority === filterPriority;
     const matchesSearch = !searchQuery ||
       deal.property_address.toLowerCase().includes(searchQuery.toLowerCase()) ||
       deal.agent_name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesPriority && matchesSearch;
+    return matchesPipelineType && matchesPriority && matchesSearch;
   });
 
-  // Group deals by stage - Updated for new pipeline stages
-  const dealsByStage = {
-    loi_accepted: filteredDeals.filter(d => d.stage === 'loi_accepted'),
-    emd: filteredDeals.filter(d => d.stage === 'emd'),
-    psa: filteredDeals.filter(d => d.stage === 'psa'),
-    inspection: filteredDeals.filter(d => d.stage === 'inspection'),
-    title_escrow: filteredDeals.filter(d => d.stage === 'title_escrow'),
-    closing: filteredDeals.filter(d => d.stage === 'closing'),
-  };
+  // Get stage order for current pipeline type
+  const stageOrder = getStageOrder(pipelineType);
+  const stageProbability = getStageProbability(pipelineType);
+
+  // Group deals by stage dynamically based on pipeline type
+  const dealsByStage: Record<string, PipelineDeal[]> = {};
+  stageOrder.forEach(stage => {
+    dealsByStage[stage] = filteredDeals.filter(d => d.stage === stage);
+  });
 
   // Handle drag start
   const handleDragStart = (event: DragStartEvent) => {
@@ -174,7 +187,7 @@ export default function PipelinePage() {
   };
 
   const calculateWeightedValue = (stageDeals: PipelineDeal[], stageName: string) => {
-    const probability = STAGE_PROBABILITY[stageName as keyof typeof STAGE_PROBABILITY] || 0;
+    const probability = stageProbability[stageName] || 0;
     const totalValue = calculateStageValue(stageDeals);
     return (totalValue * probability) / 100;
   };
@@ -208,8 +221,35 @@ export default function PipelinePage() {
                   <ArrowLeft className="w-5 h-5 text-muted-foreground" />
                 </Link>
                 <div>
-                  <h1 className="text-3xl font-bold text-foreground">Deal Pipeline</h1>
-                  <p className="text-muted-foreground mt-1">Track deals from LOI to closing</p>
+                  <div className="flex items-center gap-3 mb-2">
+                    <h1 className="text-3xl font-bold text-foreground">Deal Pipeline</h1>
+                    {/* Pipeline Type Switcher */}
+                    <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+                      <button
+                        onClick={() => setPipelineType('acquisition')}
+                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                          pipelineType === 'acquisition'
+                            ? 'bg-background text-foreground shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        Acquisition
+                      </button>
+                      <button
+                        onClick={() => setPipelineType('escrow')}
+                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                          pipelineType === 'escrow'
+                            ? 'bg-background text-foreground shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        Escrow
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground">
+                    {pipelineType === 'acquisition' ? 'Track deals from LOI to closing' : 'Track escrow deals from offer to closing'}
+                  </p>
                 </div>
               </div>
 
@@ -334,60 +374,18 @@ export default function PipelinePage() {
 
           {/* Pipeline Stages - Modern Kanban Board */}
           <div className="overflow-x-auto pb-4">
-            <div className="grid grid-cols-6 gap-4 min-w-[1200px]">
-              {/* LOI Accepted */}
-              <DroppableStageColumn
-                stage="loi_accepted"
-                deals={dealsByStage.loi_accepted}
-                onDealClick={setSelectedDealId}
-                onRefresh={fetchData}
-                compact={viewMode === 'compact'}
-              />
-
-              {/* EMD */}
-              <DroppableStageColumn
-                stage="emd"
-                deals={dealsByStage.emd}
-                onDealClick={setSelectedDealId}
-                onRefresh={fetchData}
-                compact={viewMode === 'compact'}
-              />
-
-              {/* PSA */}
-              <DroppableStageColumn
-                stage="psa"
-                deals={dealsByStage.psa}
-                onDealClick={setSelectedDealId}
-                onRefresh={fetchData}
-                compact={viewMode === 'compact'}
-              />
-
-              {/* Inspection */}
-              <DroppableStageColumn
-                stage="inspection"
-                deals={dealsByStage.inspection}
-                onDealClick={setSelectedDealId}
-                onRefresh={fetchData}
-                compact={viewMode === 'compact'}
-              />
-
-              {/* Title & Escrow */}
-              <DroppableStageColumn
-                stage="title_escrow"
-                deals={dealsByStage.title_escrow}
-                onDealClick={setSelectedDealId}
-                onRefresh={fetchData}
-                compact={viewMode === 'compact'}
-              />
-
-              {/* Closing */}
-              <DroppableStageColumn
-                stage="closing"
-                deals={dealsByStage.closing}
-                onDealClick={setSelectedDealId}
-                onRefresh={fetchData}
-                compact={viewMode === 'compact'}
-              />
+            <div className={`grid gap-4 min-w-[1200px]`} style={{ gridTemplateColumns: `repeat(${stageOrder.length}, minmax(0, 1fr))` }}>
+              {stageOrder.map(stage => (
+                <DroppableStageColumn
+                  key={stage}
+                  stage={stage}
+                  pipelineType={pipelineType}
+                  deals={dealsByStage[stage] || []}
+                  onDealClick={setSelectedDealId}
+                  onRefresh={fetchData}
+                  compact={viewMode === 'compact'}
+                />
+              ))}
             </div>
           </div>
 
@@ -396,18 +394,14 @@ export default function PipelinePage() {
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <div className="flex items-center gap-2">
                 <ChevronRight className="w-3 h-3" />
-                <span>LOI</span>
+                <span>{STAGE_SHORT_LABELS[stageOrder[0]]}</span>
               </div>
-              <div className="flex-1 h-px bg-border mx-2"></div>
-              <span>EMD</span>
-              <div className="flex-1 h-px bg-border mx-2"></div>
-              <span>PSA</span>
-              <div className="flex-1 h-px bg-border mx-2"></div>
-              <span>Inspection</span>
-              <div className="flex-1 h-px bg-border mx-2"></div>
-              <span>Title & Escrow</span>
-              <div className="flex-1 h-px bg-border mx-2"></div>
-              <span>Closing</span>
+              {stageOrder.slice(1).map((stage, index) => (
+                <React.Fragment key={stage}>
+                  <div className="flex-1 h-px bg-border mx-2"></div>
+                  <span>{STAGE_SHORT_LABELS[stage]}</span>
+                </React.Fragment>
+              ))}
               <div className="flex items-center gap-2">
                 <div className="flex-1 h-px bg-border mx-2"></div>
                 <CheckCircle2 className="w-3 h-3" />
@@ -456,6 +450,7 @@ export default function PipelinePage() {
       {/* New Deal Modal */}
       {showNewDealModal && (
         <NewDealModal
+          pipelineType={pipelineType}
           onClose={() => setShowNewDealModal(false)}
           onSuccess={fetchData}
         />

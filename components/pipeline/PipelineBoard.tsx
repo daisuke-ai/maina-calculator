@@ -171,6 +171,7 @@ export function PipelineBoard() {
               <DroppableStageColumn
                 key={stage}
                 stage={stage}
+                pipelineType="acquisition"
                 deals={stageDeals}
                 onDealClick={handleDealClick}
                 onRefresh={fetchDeals}

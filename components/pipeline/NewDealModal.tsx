@@ -3,13 +3,15 @@
 import { useState } from 'react';
 import { X, Plus } from 'lucide-react';
 import { AGENTS } from '@/config/agents';
+import { PipelineType } from '@/lib/pipeline/constants';
 
 interface NewDealModalProps {
+  pipelineType: PipelineType;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export default function NewDealModal({ onClose, onSuccess }: NewDealModalProps) {
+export default function NewDealModal({ pipelineType, onClose, onSuccess }: NewDealModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,6 +58,7 @@ export default function NewDealModal({ onClose, onSuccess }: NewDealModalProps) 
 
       // Prepare data
       const dealData = {
+        pipeline_type: pipelineType,
         property_address: formData.property_address,
         opportunity_value: parseFloat(formData.opportunity_value),
         agent_id: selectedAgent.id,
