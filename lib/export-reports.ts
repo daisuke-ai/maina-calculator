@@ -23,6 +23,20 @@ interface AgentStats {
   emails_replied_30d: number
   reply_rate_30d: number
   last_email_sent: string | null
+  // Call metrics
+  total_calls: number
+  inbound_calls: number
+  outbound_calls: number
+  answered_calls: number
+  missed_calls: number
+  total_duration: number
+  avg_duration: number
+  answer_rate: number
+  calls_30d: number
+  answered_calls_30d: number
+  total_duration_30d: number
+  avg_duration_30d: number
+  answer_rate_30d: number
 }
 
 interface OfferTypeStats {
@@ -57,6 +71,13 @@ interface DailyVolume {
 // CSV Export Functions
 
 export function downloadAgentsCSV(agents: AgentStats[], timeRange: string) {
+  // Helper to format duration from seconds to MM:SS
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
+
   const headers = [
     'Agent Name',
     'Email',
@@ -68,6 +89,11 @@ export function downloadAgentsCSV(agents: AgentStats[], timeRange: string) {
     'Reply Rate %',
     'Last 30d Sent',
     'Last 30d Replied',
+    'Total Calls',
+    'Answered Calls',
+    'Answer Rate %',
+    'Avg Call Duration',
+    'Last 30d Calls',
     'Last Email Sent'
   ]
 
@@ -82,6 +108,11 @@ export function downloadAgentsCSV(agents: AgentStats[], timeRange: string) {
     agent.reply_rate?.toFixed(1) || '0.0',
     agent.emails_sent_30d,
     agent.emails_replied_30d,
+    agent.total_calls || 0,
+    agent.answered_calls || 0,
+    agent.answer_rate?.toFixed(1) || '0.0',
+    formatDuration(agent.avg_duration || 0),
+    agent.calls_30d || 0,
     agent.last_email_sent ? new Date(agent.last_email_sent).toLocaleDateString() : 'Never'
   ])
 
@@ -132,7 +163,15 @@ export function downloadAnalyticsCSV(
 // PDF Export Functions
 
 export function downloadAgentsPDF(agents: AgentStats[], timeRange: string) {
-  const doc = new jsPDF()
+  // Use landscape orientation to fit more columns
+  const doc = new jsPDF({ orientation: 'landscape' })
+
+  // Helper to format duration from seconds to MM:SS
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
 
   // Title
   doc.setFontSize(18)
@@ -145,7 +184,7 @@ export function downloadAgentsPDF(agents: AgentStats[], timeRange: string) {
   doc.text(`Time Range: ${formatTimeRangeLabel(timeRange)}`, 14, 28)
   doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 34)
 
-  // Summary Stats
+  // Summary Stats - Email and Call metrics
   const totalSent = agents.reduce((sum, a) => sum + a.total_sent, 0)
   const totalOpened = agents.reduce((sum, a) => sum + a.total_opened, 0)
   const totalReplied = agents.reduce((sum, a) => sum + a.total_replied, 0)
@@ -153,52 +192,73 @@ export function downloadAgentsPDF(agents: AgentStats[], timeRange: string) {
     ? (agents.reduce((sum, a) => sum + (a.reply_rate || 0), 0) / agents.length).toFixed(1)
     : '0.0'
 
+  const totalCalls = agents.reduce((sum, a) => sum + (a.total_calls || 0), 0)
+  const totalAnswered = agents.reduce((sum, a) => sum + (a.answered_calls || 0), 0)
+  const avgAnswerRate = agents.length > 0
+    ? (agents.reduce((sum, a) => sum + (a.answer_rate || 0), 0) / agents.length).toFixed(1)
+    : '0.0'
+  const avgCallDuration = totalCalls > 0
+    ? Math.round(agents.reduce((sum, a) => sum + (a.total_duration || 0), 0) / totalCalls)
+    : 0
+
   doc.setFontSize(12)
   doc.setTextColor(0, 0, 0)
   doc.text('Summary', 14, 44)
 
-  doc.setFontSize(10)
+  doc.setFontSize(9)
   doc.setTextColor(60, 60, 60)
+  // Left column - Email metrics
   doc.text(`Total Agents: ${agents.length}`, 14, 52)
   doc.text(`Total Emails: ${totalSent.toLocaleString()}`, 14, 58)
   doc.text(`Total Replies: ${totalReplied}`, 14, 64)
-  doc.text(`Average Reply Rate: ${avgReplyRate}%`, 14, 70)
+  doc.text(`Avg Reply Rate: ${avgReplyRate}%`, 14, 70)
 
-  // Agent Table
+  // Right column - Call metrics
+  doc.text(`Total Calls: ${totalCalls.toLocaleString()}`, 100, 52)
+  doc.text(`Answered Calls: ${totalAnswered}`, 100, 58)
+  doc.text(`Avg Answer Rate: ${avgAnswerRate}%`, 100, 64)
+  doc.text(`Avg Call Duration: ${formatDuration(avgCallDuration)}`, 100, 70)
+
+  // Agent Table - Include both email and call metrics
   const tableData = agents.map(agent => [
     agent.aliasName,
     agent.total_sent,
-    agent.total_opened,
-    `${agent.open_rate?.toFixed(1) || '0.0'}%`,
     agent.total_replied,
     `${agent.reply_rate?.toFixed(1) || '0.0'}%`,
     agent.emails_sent_30d,
-    agent.last_email_sent ? new Date(agent.last_email_sent).toLocaleDateString() : 'Never'
+    agent.total_calls || 0,
+    agent.answered_calls || 0,
+    `${agent.answer_rate?.toFixed(1) || '0.0'}%`,
+    formatDuration(agent.avg_duration || 0),
+    agent.calls_30d || 0
   ])
 
   autoTable(doc, {
     startY: 78,
-    head: [['Agent', 'Sent', 'Opened', 'Open %', 'Replied', 'Reply %', '30d Sent', 'Last Active']],
+    head: [['Agent', 'Emails', 'Replies', 'Reply %', '30d Emails', 'Calls', 'Answered', 'Answer %', 'Avg Duration', '30d Calls']],
     body: tableData,
     theme: 'grid',
     headStyles: {
       fillColor: [76, 175, 80], // Green
       textColor: [255, 255, 255],
-      fontStyle: 'bold'
+      fontStyle: 'bold',
+      fontSize: 8
     },
     styles: {
-      fontSize: 9,
-      cellPadding: 3
+      fontSize: 8,
+      cellPadding: 2
     },
     columnStyles: {
-      0: { cellWidth: 40 },
-      1: { halign: 'center', cellWidth: 15 },
-      2: { halign: 'center', cellWidth: 15 },
-      3: { halign: 'center', cellWidth: 15 },
-      4: { halign: 'center', cellWidth: 15 },
-      5: { halign: 'center', cellWidth: 15 },
-      6: { halign: 'center', cellWidth: 20 },
-      7: { halign: 'center', cellWidth: 25 }
+      0: { cellWidth: 45 }, // Agent name
+      1: { halign: 'center', cellWidth: 20 }, // Emails
+      2: { halign: 'center', cellWidth: 20 }, // Replies
+      3: { halign: 'center', cellWidth: 20 }, // Reply %
+      4: { halign: 'center', cellWidth: 25 }, // 30d Emails
+      5: { halign: 'center', cellWidth: 20 }, // Calls
+      6: { halign: 'center', cellWidth: 25 }, // Answered
+      7: { halign: 'center', cellWidth: 22 }, // Answer %
+      8: { halign: 'center', cellWidth: 28 }, // Avg Duration
+      9: { halign: 'center', cellWidth: 22 }  // 30d Calls
     }
   })
 
