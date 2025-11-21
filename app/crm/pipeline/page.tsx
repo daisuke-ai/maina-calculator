@@ -81,8 +81,8 @@ export default function PipelinePage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch active deals
-      const dealsRes = await fetch('/api/crm/pipeline/deals?status=active');
+      // Fetch all deals (active, won, lost)
+      const dealsRes = await fetch('/api/crm/pipeline/deals?status=all');
       const dealsData = await dealsRes.json();
       setDeals(dealsData.deals || []);
 
@@ -115,9 +115,12 @@ export default function PipelinePage() {
   const stageOrder = getStageOrder(pipelineType);
   const stageProbability = getStageProbability(pipelineType);
 
+  // Create display stages: active stages + won + lost
+  const displayStages = [...stageOrder, 'won', 'lost'];
+
   // Group deals by stage dynamically based on pipeline type
   const dealsByStage: Record<string, PipelineDeal[]> = {};
-  stageOrder.forEach(stage => {
+  displayStages.forEach(stage => {
     dealsByStage[stage] = filteredDeals.filter(d => d.stage === stage);
   });
 
@@ -374,8 +377,8 @@ export default function PipelinePage() {
 
           {/* Pipeline Stages - Modern Kanban Board */}
           <div className="overflow-x-auto pb-4">
-            <div className={`grid gap-4 min-w-[1200px]`} style={{ gridTemplateColumns: `repeat(${stageOrder.length}, minmax(0, 1fr))` }}>
-              {stageOrder.map(stage => (
+            <div className={`grid gap-4 min-w-[1200px]`} style={{ gridTemplateColumns: `repeat(${displayStages.length}, minmax(0, 1fr))` }}>
+              {displayStages.map(stage => (
                 <DroppableStageColumn
                   key={stage}
                   stage={stage}
@@ -404,7 +407,13 @@ export default function PipelinePage() {
               ))}
               <div className="flex items-center gap-2">
                 <div className="flex-1 h-px bg-border mx-2"></div>
-                <CheckCircle2 className="w-3 h-3" />
+                <CheckCircle2 className="w-3 h-3 text-green-500" />
+                <span>Won</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-px bg-border mx-2"></div>
+                <AlertCircle className="w-3 h-3 text-red-500" />
+                <span>Lost</span>
               </div>
             </div>
           </div>
