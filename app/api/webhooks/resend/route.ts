@@ -51,7 +51,41 @@ export async function POST(request: NextRequest) {
       console.warn('[Resend Webhook] No tracking ID found in event:', eventType);
       // For email.received events without tracking (external emails), still try to handle
       if (eventType === 'email.received') {
-        await handleEmailReply(eventData);
+        // Fetch full email content from Resend API
+        // Webhooks don't include HTML/text body - must fetch separately
+        console.log(`[Email Reply Received] Email ID:`, eventData.email_id);
+        console.log(`[Email Reply Received] Full webhook payload:`, JSON.stringify(eventData, null, 2));
+
+        const resendClient = new Resend(process.env.RESEND_API_KEY);
+        let fullEmailData = eventData;
+
+        try {
+          console.log(`[Email Reply Received] Fetching content from Resend API...`);
+          const emailResponse = await resendClient.emails.receiving.get(eventData.email_id);
+          console.log(`[Email Reply Received] API Response:`, JSON.stringify(emailResponse, null, 2));
+
+          const emailContent = emailResponse.data;
+          console.log(`[Email Reply Received] emailContent:`, emailContent ? 'exists' : 'null/undefined');
+          console.log(`[Email Reply Received] emailContent.html:`, emailContent?.html ? `${emailContent.html.length} chars` : 'undefined');
+          console.log(`[Email Reply Received] emailContent.text:`, emailContent?.text ? `${emailContent.text.length} chars` : 'undefined');
+
+          if (emailContent?.html || emailContent?.text) {
+            fullEmailData = {
+              ...eventData,
+              html: emailContent.html,
+              text: emailContent.text,
+            };
+            console.log(`[Email Reply Received] Successfully merged content`);
+          } else {
+            console.log(`[Email Reply Received] No html or text in API response`);
+          }
+        } catch (fetchError: any) {
+          console.error('[Email Reply Received] Error fetching content:', fetchError.message);
+          console.error('[Email Reply Received] Error details:', JSON.stringify(fetchError, null, 2));
+        }
+
+        await handleEmailReply(fullEmailData);
+        console.log(`[Email Reply Received] Processed - html: ${fullEmailData.html ? 'yes' : 'no'}, text: ${fullEmailData.text ? 'yes' : 'no'}`);
       }
       return NextResponse.json({ received: true });
     }
