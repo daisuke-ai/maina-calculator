@@ -64,6 +64,7 @@ export default function PipelinePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'compact' | 'detailed'>('compact');
   const [pipelineType, setPipelineType] = useState<PipelineType>('acquisition');
+  const [pipelineView, setPipelineView] = useState<'active' | 'closed'>('active');
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -108,19 +109,22 @@ export default function PipelinePage() {
     const matchesSearch = !searchQuery ||
       deal.property_address.toLowerCase().includes(searchQuery.toLowerCase()) ||
       deal.agent_name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesPipelineType && matchesPriority && matchesSearch;
+
+    // Filter by pipeline view (active vs closed)
+    const matchesView = pipelineView === 'active'
+      ? (deal.status === 'active' || deal.status === 'on_hold')
+      : (deal.status === 'won' || deal.status === 'lost');
+
+    return matchesPipelineType && matchesPriority && matchesSearch && matchesView;
   });
 
   // Get stage order for current pipeline type
   const stageOrder = getStageOrder(pipelineType);
   const stageProbability = getStageProbability(pipelineType);
 
-  // Create display stages: active stages + won + lost
-  const displayStages = [...stageOrder, 'won', 'lost'];
-
   // Group deals by stage dynamically based on pipeline type
   const dealsByStage: Record<string, PipelineDeal[]> = {};
-  displayStages.forEach(stage => {
+  stageOrder.forEach(stage => {
     dealsByStage[stage] = filteredDeals.filter(d => d.stage === stage);
   });
 
@@ -226,32 +230,59 @@ export default function PipelinePage() {
                 <div>
                   <div className="flex items-center gap-3 mb-2">
                     <h1 className="text-3xl font-bold text-foreground">Deal Pipeline</h1>
-                    {/* Pipeline Type Switcher */}
+                    {/* Pipeline View Switcher */}
                     <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
                       <button
-                        onClick={() => setPipelineType('acquisition')}
+                        onClick={() => setPipelineView('active')}
                         className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                          pipelineType === 'acquisition'
+                          pipelineView === 'active'
                             ? 'bg-background text-foreground shadow-sm'
                             : 'text-muted-foreground hover:text-foreground'
                         }`}
                       >
-                        Acquisition
+                        Active
                       </button>
                       <button
-                        onClick={() => setPipelineType('escrow')}
+                        onClick={() => setPipelineView('closed')}
                         className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                          pipelineType === 'escrow'
+                          pipelineView === 'closed'
                             ? 'bg-background text-foreground shadow-sm'
                             : 'text-muted-foreground hover:text-foreground'
                         }`}
                       >
-                        Escrow
+                        Closed
                       </button>
                     </div>
+                    {/* Pipeline Type Switcher - Only show for active pipeline */}
+                    {pipelineView === 'active' && (
+                      <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+                        <button
+                          onClick={() => setPipelineType('acquisition')}
+                          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                            pipelineType === 'acquisition'
+                              ? 'bg-background text-foreground shadow-sm'
+                              : 'text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          Acquisition
+                        </button>
+                        <button
+                          onClick={() => setPipelineType('escrow')}
+                          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                            pipelineType === 'escrow'
+                              ? 'bg-background text-foreground shadow-sm'
+                              : 'text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          Escrow
+                        </button>
+                      </div>
+                    )}
                   </div>
                   <p className="text-muted-foreground">
-                    {pipelineType === 'acquisition' ? 'Track deals from LOI to closing' : 'Track escrow deals from offer to closing'}
+                    {pipelineView === 'active'
+                      ? (pipelineType === 'acquisition' ? 'Track deals from LOI to closing' : 'Track escrow deals from offer to closing')
+                      : 'View all closed and lost deals'}
                   </p>
                 </div>
               </div>
@@ -375,51 +406,128 @@ export default function PipelinePage() {
             </select>
           </div>
 
-          {/* Pipeline Stages - Modern Kanban Board */}
-          <div className="overflow-x-auto pb-4">
-            <div className={`grid gap-4 min-w-[1200px]`} style={{ gridTemplateColumns: `repeat(${displayStages.length}, minmax(0, 1fr))` }}>
-              {displayStages.map(stage => (
-                <DroppableStageColumn
-                  key={stage}
-                  stage={stage}
-                  pipelineType={pipelineType}
-                  deals={dealsByStage[stage] || []}
-                  onDealClick={setSelectedDealId}
-                  onRefresh={fetchData}
-                  compact={viewMode === 'compact'}
-                />
-              ))}
-            </div>
-          </div>
+          {/* Active Pipeline - Modern Kanban Board */}
+          {pipelineView === 'active' && (
+            <>
+              <div className="overflow-x-auto pb-4">
+                <div className={`grid gap-4 min-w-[1200px]`} style={{ gridTemplateColumns: `repeat(${stageOrder.length}, minmax(0, 1fr))` }}>
+                  {stageOrder.map(stage => (
+                    <DroppableStageColumn
+                      key={stage}
+                      stage={stage}
+                      pipelineType={pipelineType}
+                      deals={dealsByStage[stage] || []}
+                      onDealClick={setSelectedDealId}
+                      onRefresh={fetchData}
+                      compact={viewMode === 'compact'}
+                    />
+                  ))}
+                </div>
+              </div>
 
-          {/* Pipeline Flow Indicator */}
-          <div className="bg-muted/30 rounded-lg p-4">
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <ChevronRight className="w-3 h-3" />
-                <span>{STAGE_SHORT_LABELS[stageOrder[0]]}</span>
+              {/* Pipeline Flow Indicator */}
+              <div className="bg-muted/30 rounded-lg p-4">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <ChevronRight className="w-3 h-3" />
+                    <span>{STAGE_SHORT_LABELS[stageOrder[0]]}</span>
+                  </div>
+                  {stageOrder.slice(1).map((stage, index) => (
+                    <React.Fragment key={stage}>
+                      <div className="flex-1 h-px bg-border mx-2"></div>
+                      <span>{STAGE_SHORT_LABELS[stage]}</span>
+                    </React.Fragment>
+                  ))}
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-px bg-border mx-2"></div>
+                    <CheckCircle2 className="w-3 h-3" />
+                  </div>
+                </div>
               </div>
-              {stageOrder.slice(1).map((stage, index) => (
-                <React.Fragment key={stage}>
-                  <div className="flex-1 h-px bg-border mx-2"></div>
-                  <span>{STAGE_SHORT_LABELS[stage]}</span>
-                </React.Fragment>
-              ))}
-              <div className="flex items-center gap-2">
-                <div className="flex-1 h-px bg-border mx-2"></div>
-                <CheckCircle2 className="w-3 h-3 text-green-500" />
-                <span>Won</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex-1 h-px bg-border mx-2"></div>
-                <AlertCircle className="w-3 h-3 text-red-500" />
-                <span>Lost</span>
-              </div>
-            </div>
-          </div>
+            </>
+          )}
 
-          {/* Empty State */}
-          {filteredDeals.length === 0 && !loading && (
+          {/* Closed Deals - Table View */}
+          {pipelineView === 'closed' && (
+            <Card className="border-2">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-muted/50 border-b">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Status</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Property</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Value</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Agent</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Pipeline</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Closed Date</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {filteredDeals.map(deal => (
+                      <tr key={deal.id} className="hover:bg-muted/30 transition-colors">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            {deal.status === 'won' ? (
+                              <CheckCircle2 className="w-4 h-4 text-green-500" />
+                            ) : (
+                              <AlertCircle className="w-4 h-4 text-red-500" />
+                            )}
+                            <span className={`text-sm font-medium ${
+                              deal.status === 'won' ? 'text-green-600' : 'text-red-600'
+                            }`}>
+                              {deal.status === 'won' ? 'Won' : 'Lost'}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="text-sm font-medium text-foreground">{deal.property_address}</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="text-sm font-medium text-foreground">{formatCurrency(deal.opportunity_value)}</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="text-sm text-muted-foreground">{deal.agent_name}</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="text-sm text-muted-foreground capitalize">{deal.pipeline_type || 'acquisition'}</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="text-sm text-muted-foreground">
+                            {deal.status === 'won' && deal.won_at
+                              ? new Date(deal.won_at).toLocaleDateString()
+                              : deal.status === 'lost' && deal.lost_at
+                              ? new Date(deal.lost_at).toLocaleDateString()
+                              : '-'}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <button
+                            onClick={() => setSelectedDealId(deal.id)}
+                            className="text-sm text-accent hover:text-accent/80 font-medium transition-colors"
+                          >
+                            View Details
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {filteredDeals.length === 0 && (
+                <div className="text-center py-12">
+                  <CheckCircle2 className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+                  <h3 className="text-lg font-semibold text-foreground mb-2">No closed deals found</h3>
+                  <p className="text-muted-foreground text-sm">
+                    Closed and lost deals will appear here
+                  </p>
+                </div>
+              )}
+            </Card>
+          )}
+
+          {/* Empty State - Active Pipeline Only */}
+          {pipelineView === 'active' && filteredDeals.length === 0 && !loading && (
             <div className="text-center py-16">
               <Target className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
               <h3 className="text-lg font-semibold text-foreground mb-2">No deals found</h3>
