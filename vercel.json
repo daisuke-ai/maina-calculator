@@ -7,6 +7,9 @@
   "functions": {
     "app/api/**/*.ts": {
       "maxDuration": 30
+    },
+    "app/api/cron/sync-calls/route.ts": {
+      "maxDuration": 60
     }
   },
   "crons": [

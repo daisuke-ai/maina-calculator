@@ -1,13 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { syncCallLogs } from '@/lib/ringcentral/sync';
 
-// This endpoint can be called by Vercel Cron Jobs or external schedulers
-// Add to vercel.json:
-// {
-//   "crons": [{
-//     "path": "/api/cron/sync-calls",
-//     "schedule": "0 */6 * * *"  // Every 6 hours
-//   }]
-// }
+// This endpoint is called by Vercel Cron Jobs
+// Configured in vercel.json to run daily at 2:00 AM UTC
 
 export async function GET(request: NextRequest) {
   // Verify cron secret to prevent unauthorized calls
@@ -25,30 +20,30 @@ export async function GET(request: NextRequest) {
 
     console.log(`[Cron Sync] Starting sync for date range: ${dateFrom.toISOString()} to ${dateTo.toISOString()}`);
 
-    // Sync all calls - phone number matching works better than extension filtering
-    // Agent mapping by phone number achieves 84% accuracy
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-    const response = await fetch(`${baseUrl}/api/ringcentral/sync-calls`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        dateFrom: dateFrom.toISOString(),
-        dateTo: dateTo.toISOString(),
-        perPage: 1000,
-        fetchAllPages: true,
-        onlyAccurate: true  // Only sync calls with agent mapping
-      })
+    // Call sync logic directly (no HTTP request needed)
+    const result = await syncCallLogs({
+      dateFrom: dateFrom.toISOString(),
+      dateTo: dateTo.toISOString(),
+      perPage: 1000,
+      fetchAllPages: true,
+      onlyAccurate: true, // Only sync calls with agent mapping
     });
 
-    const result = await response.json();
+    if (!result.success) {
+      console.error('[Cron Sync] Failed:', result.error, result.details);
+      return NextResponse.json(
+        { error: 'Sync failed', details: result.details },
+        { status: 500 }
+      );
+    }
 
-    console.log(`[Cron Sync] Completed: ${result.synced || 0} records synced from ${result.totalRecordsFetched || 0} fetched`);
+    console.log(`[Cron Sync] Completed: ${result.synced} records synced from ${result.totalRecordsFetched || 0} fetched`);
     console.log(`[Cron Sync] Accuracy: ${result.accuracy || 0}% (${result.withAgentId || 0}/${result.total || 0} mapped)`);
     console.log(`[Cron Sync] Pages fetched: ${result.pagesFetched || 1}`);
 
     return NextResponse.json({
       success: true,
-      message: `Synced ${result.synced || 0} call records from ${result.totalRecordsFetched || 0} fetched (${result.pagesFetched || 1} pages) at ${result.accuracy || 100}% accuracy (filtered ${result.filtered || 0} unmapped)`,
+      message: `Synced ${result.synced} call records from ${result.totalRecordsFetched || 0} fetched (${result.pagesFetched || 1} pages) at ${result.accuracy || 100}% accuracy (filtered ${result.filtered || 0} unmapped)`,
       synced: result.synced,
       totalFetched: result.totalRecordsFetched,
       accuracy: result.accuracy,
